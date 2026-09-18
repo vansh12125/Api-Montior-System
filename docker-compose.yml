@@ -1,0 +1,85 @@
+services:
+  postgres:
+    image: postgres:alpine3.24
+    container_name: api-monitoring-postgres
+    environment:
+      POSTGRES_DB: api_monitoring
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12125
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+     - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_postgresql.sql:/docker-entrypoint-initdb.d/init-postgres.sql
+    networks:
+      - api-monitoring-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d api_monitoring"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  
+  mongo:
+    image: mongo
+    container_name: api-monitoring-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - api-monitoring-network
+    restart: unless-stopped
+  
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: api-monitoring-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: 12125
+      RABBITMQ_DEFAULT_VHOST: api_monitoring
+    ports:
+      - "5672:5672" # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - api-monitoring-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:7
+    container_name: api-monitoring-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: postgres
+      PGADMIN_DEFAULT_PASSWORD: 12125
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - api-monitoring-network
+    restart: unless-stopped
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  mongo_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  api-monitoring-network:
+    driver: bridge
