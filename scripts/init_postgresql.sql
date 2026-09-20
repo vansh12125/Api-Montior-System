@@ -13,10 +13,9 @@ CREATE TABLE IF NOT EXISTS endpoint_metrics (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
-    UNIQUE(client_id, service_name, endpoint, method, time_bucket) -- Inseert | Update
+    UNIQUE(client_id, service_name, endpoint, method, time_bucket) 
 );
 
--- 10:25 => 1 req (Time Roundoff) [10:00        11:00]
 
 CREATE INDEX IF NOT EXISTS idx_endpoint_metrics_client_id ON endpoint_metrics(client_id);
 CREATE INDEX IF NOT EXISTS idx_endpoint_metrics_service ON endpoint_metrics(client_id, service_name);

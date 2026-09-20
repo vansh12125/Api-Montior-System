@@ -8,7 +8,7 @@ const app: Express = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: config.frontendUrl,
+    origin: config.server.frontendUrl,
     credentials: true,
   }),
 );

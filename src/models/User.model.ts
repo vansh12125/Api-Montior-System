@@ -1,4 +1,4 @@
-import mongoose, { Schema, model, Model, HydratedDocument } from "mongoose";
+import { Schema, model, Model, HydratedDocument } from "mongoose";
 import { UserModel } from "../interfaces";
 import { Roles } from "../enums";
 
@@ -85,7 +85,7 @@ const UserSchema: Schema<UserModel> = new Schema<UserModel>(
   },
   {
     timestamps: true,
-    collection: "Users",
+    collection: "users",
     toJSON: {
       transform: function (doc, ret) {
         const { password, __v, ...user } = ret as UserModel & {
