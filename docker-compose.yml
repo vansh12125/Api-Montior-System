@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: api_monitoring
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 12125
+      POSTGRES_PASSWORD: "12125"
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
     ports:
       - "5432:5432"
@@ -21,7 +21,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    
+
   mongo:
     image: mongo
     container_name: api-monitoring-mongo
@@ -32,17 +32,23 @@ services:
     networks:
       - api-monitoring-network
     restart: unless-stopped
-  
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   rabbitmq:
     image: rabbitmq:management
     container_name: api-monitoring-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: user
-      RABBITMQ_DEFAULT_PASS: 12125
+      RABBITMQ_DEFAULT_PASS: "12125"
       RABBITMQ_DEFAULT_VHOST: api_monitoring
     ports:
-      - "5672:5672" # AMQP port
-      - "15672:15672" # Management UI
+      - "5672:5672"
+      - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
@@ -59,7 +65,7 @@ services:
     container_name: api-monitoring-pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: 12125
+      PGADMIN_DEFAULT_PASSWORD: "12125"
     ports:
       - "8080:80"
     volumes:
@@ -68,15 +74,90 @@ services:
       - api-monitoring-network
     restart: unless-stopped
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
+  api-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-monitoring-app
+    environment:
+      NODE_ENV: production
+      SERVER_PORT: 5000
+      API_VERSION: v1
+      FRONTEND_URL: http://localhost:5173
+
+      SALT_ROUNDS: 10
+
+      MONGO_URI: mongodb://mongo:27017/api_monitoring
+      MONGO_DB_NAME: api_monitoring
+
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: api_monitoring
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "12125"
+
+      RABBITMQ_URL: amqp://user:12125@rabbitmq:5672/api_monitoring
+      RABBITMQ_QUEUE: api_hits
+      RABBITMQ_PUBLISHER_CONFIRMS: "true"
+      RABBITMQ_RETRY_ATTEMPTS: 3
+      RABBITMQ_RETRY_DELAY: 1000
+
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 1000
+
+      JWT_TOKEN_COOKIE_SECURE: "false"
+      JWT_TOKEN_COOKIE_HTTP_ONLY: "true"
+      JWT_TOKEN_COOKIE_SAME_SITE: "lax"
+      JWT_TOKEN_ISSUER: com.api.vansh.app
+
+      JWT_TOKEN_ACCESS_SECRET: 29HH@D%=|v6WpP1T7xrjO|ExVK2HxmqHo/|B+/(95{.22uGLV7(SgFd1#%}:erasihp;gqnerlakdsmgzxve oi;^%&*%&#%E4hp}w84Vl]R%xKzW5DM
+      JWT_TOKEN_REFRESH_SECRET: G[{g(jrYDP3-2R+SMGgNli}[Z@t/@z0oeVGP{3X5ZZsW@:685414653qewtsf342-q5w17023-5@#%%!@#%!#werdSFGXZ*(lR@eK><3jv2m|MSlkHy[IpAxmG9T7T:[-w}
+
+      ACCESS_TOKEN_EXPIRY: 900
+      ACCESS_TOKEN_COOKIE_NAME: __Host-acc
+      REFRESH_TOKEN_EXPIRY: 604800
+      REFRESH_TOKEN_COOKIE_NAME: __Host-ref
+      REFRESH_COOKIE_MAX_AGE: 604800000
+      ACCESS_COOKIE_MAX_AGE: 900000
+
+    ports:
+      - "5000:5000"
+
+    volumes:
+      - ./logs:/app/logs
+
+    networks:
+      - api-monitoring-network
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 volumes:
   postgres_data:
     driver: local
+
   rabbitmq_data:
     driver: local
+
   mongo_data:
     driver: local
+
   pgadmin_data:
     driver: local
 

@@ -1,7 +1,7 @@
 import mongoose, { type Connection } from "mongoose";
 
 import logger from "./logger";
-import config from "./constants";
+import config from "../constants";
 
 /**
  * MongoDB database manager/connector

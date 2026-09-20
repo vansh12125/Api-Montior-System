@@ -1,5 +1,5 @@
 import winston from "winston";
-import config from "./constants";
+import config from "../constants";
 
 /**
  * Winston logger configuration

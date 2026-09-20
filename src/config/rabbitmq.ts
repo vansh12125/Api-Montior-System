@@ -4,7 +4,7 @@ import amqp, {
 } from "amqplib";
 
 import logger from "./logger";
-import config from "./constants";
+import config from "../constants";
 
 class RabbitMqConnection {
   private connection: ChannelModel | null;

@@ -5,7 +5,7 @@ import {
 } from "pg";
 
 import logger from "./logger";
-import config from "./constants";
+import config from "../constants";
 
 class PostgresConnection {
   private pool: Pool | null;
