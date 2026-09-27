@@ -4,7 +4,7 @@ import config from "./constants/index.js";
 import helmet from "helmet";
 import routes from "./routes/index.js";
 import { ResponseFormatter } from "./utils/index.js";
-import {logger} from "./configs/index.js"
+import {logger,initializeConnection,disconnectConnection} from "./configs/index.js"
 
 const app = express();
 
@@ -73,8 +73,7 @@ app.use((req, res) => {
  */
 async function startServer() {
   try {
-    // await initializeConnection();
-    // await createSuperAdmin();
+    await initializeConnection();
 
     const server = app.listen(config.server.port, () => {
       logger.info(`Server started on port ${config.server.port}`);
@@ -89,7 +88,7 @@ async function startServer() {
         logger.info("HTTP server closed");
 
         try {
-        //   await disconnectConnection();
+          await disconnectConnection();
         } catch (error) {
           logger.error("Error during shutdown:", error);
           process.exit(1);
