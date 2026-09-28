@@ -1,0 +1,19 @@
+const API_METHODS = Object.freeze({
+  GET: "GET",
+  POST: "POST",
+  PUT: "PUT",
+  DELETE: "DELETE",
+  OPTIONS: "OPTIONS",
+  PATCH: "PATCH",
+  HEAD: "HEAD",
+  QUERY: "QUERY",
+});
+
+const API_ENIVORNMENT = Object.freeze({
+  PRODUCTION: "PRODUCTION",
+  STAGING: "STAGING",
+  DEVELOPMENT: "DEVELOPMENT",
+  TESTING: "TESTING",
+});
+
+export { API_ENIVORNMENT, API_METHODS };

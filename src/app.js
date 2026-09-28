@@ -4,7 +4,12 @@ import config from "./constants/index.js";
 import helmet from "helmet";
 import routes from "./routes/index.js";
 import { ResponseFormatter } from "./utils/index.js";
-import {logger,initializeConnection,disconnectConnection} from "./configs/index.js"
+import {
+  logger,
+  initializeConnection,
+  disconnectConnection,
+} from "./configs/index.js";
+import {createSuperAdmin} from "../scripts/create-super-admin.js"
 
 const app = express();
 
@@ -18,7 +23,6 @@ app.use(
   }),
 );
 app.use(`/api/${config.server.apiVersion}`, routes);
-
 
 /**
  * Root endpoint
@@ -52,7 +56,6 @@ app.get("/health", (req, res) => {
   );
 });
 
-
 /**
  * 404 Handler
  */
@@ -64,7 +67,6 @@ app.use((req, res) => {
     );
 });
 
-
 /**
  * Start the Express server after establishing database connections.
  * Also sets up graceful shutdown handlers for SIGINT and SIGTERM signals.
@@ -74,7 +76,7 @@ app.use((req, res) => {
 async function startServer() {
   try {
     await initializeConnection();
-
+    await createSuperAdmin();
     const server = app.listen(config.server.port, () => {
       logger.info(`Server started on port ${config.server.port}`);
       logger.info(`Environment: ${config.nodeEnv}`);
