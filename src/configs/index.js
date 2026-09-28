@@ -49,4 +49,11 @@ async function disconnectConnection() {
   }
 }
 
-export { initializeConnection, disconnectConnection,logger, mongodb, postgres, rabbitmq };
+export {
+  initializeConnection,
+  disconnectConnection,
+  logger,
+  mongodb,
+  postgres,
+  rabbitmq,
+};
