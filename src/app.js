@@ -9,7 +9,8 @@ import {
   initializeConnection,
   disconnectConnection,
 } from "./configs/index.js";
-import {createSuperAdmin} from "../scripts/create-super-admin.js"
+import { createSuperAdmin } from "../scripts/create-super-admin.js";
+import errorHandler from "./middlewares/error.middleware.js"
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use(
   }),
 );
 app.use(`/api/${config.server.apiVersion}`, routes);
+app.use(errorHandler);
 
 /**
  * Root endpoint
