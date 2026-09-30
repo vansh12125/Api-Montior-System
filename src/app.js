@@ -10,12 +10,14 @@ import {
   disconnectConnection,
 } from "./configs/index.js";
 import { createSuperAdmin } from "../scripts/create-super-admin.js";
-import errorHandler from "./middlewares/error.middleware.js"
+import errorHandler from "./middlewares/error.middleware.js";
+import cookieParser from "cookie-parser";
 
 const app = express();
 
 app.use(helmet());
 app.use(express.json());
+app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({

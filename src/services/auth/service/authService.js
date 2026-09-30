@@ -4,6 +4,9 @@ import ApiError from "../../../error/ApiError.js";
 import { hashPassword, verifyPassword } from "../../bcryptService.js";
 import { Roles } from "../../../enums/index.js";
 import { logger } from "../../../configs/index.js";
+import crypto from "crypto";
+import config from "../../../constants/index.js";
+import { getClientInfo } from "../../../utils/index.js";
 
 export default class AuthService {
   constructor(dependencies) {
@@ -19,9 +22,18 @@ export default class AuthService {
       throw new Error("Client Service is required");
     }
 
+    if (!dependencies.tokenService) {
+      throw new Error("Token Service is required");
+    }
+
     this.userRepository = dependencies.userRepository;
     this.clientService = dependencies.clientService;
+    this.tokenService = dependencies.tokenService;
   }
+
+  generateSessionId = () => {
+    return crypto.randomBytes(32).toString("hex");
+  };
 
   async registerClientAdmin(reqBody) {
     const session = await mongoose.startSession();
@@ -102,11 +114,16 @@ export default class AuthService {
     }
   }
 
-  async loginUser(reqBody) {
+  async loginUser(req, res) {
+    const session = await mongoose.startSession();
     try {
-      const { context, password } = reqBody;
+      session.startTransaction();
 
-      const existingUser = await this.userRepository.findUserForLogin(context);
+      const { context, password } = req.body;
+
+      const existingUser = await this.userRepository.findUserForLogin(context, {
+        session,
+      });
 
       if (!existingUser) {
         throw ApiError.unauthorized("Invalid username/email or password", {
@@ -125,11 +142,51 @@ export default class AuthService {
         });
       }
 
-      return existingUser.toJSON();
+      const sessionId = this.generateSessionId();
+      const accToken = await this.tokenService.generateAccessToken(
+        existingUser._id.toString(),
+        sessionId,
+        existingUser.role,
+      );
+      const refToken = await this.tokenService.generateRefreshToken(
+        existingUser._id.toString(),
+        sessionId,
+        existingUser.role,
+      );
+
+      await this.tokenService.saveTokenInDb(
+        refToken,
+        sessionId,
+        existingUser._id.toString(),
+        getClientInfo(req),
+        existingUser.role,
+        { session },
+      );
+
+      res.cookie(config.jwt.cookie.accessTokenName, accToken, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.refreshMaxAge,
+        path: config.jwt.cookie.path,
+      });
+
+      res.cookie(config.jwt.cookie.refreshTokenName, refToken, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.refreshMaxAge,
+        path: config.jwt.cookie.path,
+      });
+
+      return "Logged in successfull";
     } catch (error) {
+      await session.abortTransaction();
       logger.error(`Error occurred in loginUser: ${error}`);
 
       throw error;
+    } finally {
+      await session.endSession();
     }
   }
 }

@@ -1,4 +1,4 @@
-export default class BaseRepository {
+export default class BaseUserRepository {
   constructor(model) {
     this.model = model;
   }

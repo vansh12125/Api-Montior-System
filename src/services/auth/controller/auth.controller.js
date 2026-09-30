@@ -31,7 +31,7 @@ export default class AuthController {
 
   async loginUser(req, res, next) {
     try {
-      const result =await this.authService.loginUser(req.body);
+      const result = await this.authService.loginUser(req, res);
       logger.debug("Client login successfully ");
       return res
         .status(200)

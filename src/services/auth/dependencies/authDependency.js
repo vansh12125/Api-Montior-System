@@ -1,5 +1,7 @@
 import MongoUserRepository from "../repository/MongoUserRepository.js";
+import MongoTokenRepository from "../repository/MongoTokenRepository.js";
 import AuthService from "../service/authService.js";
+import TokenService from "../service/tokenService.js";
 import AuthController from "../controller/auth.controller.js";
 import ClientDependency from "../../client/dependencies/clientDependency.js";
 
@@ -12,12 +14,14 @@ class AuthDependency {
   static init() {
     const repository = {
       userRepository: new MongoUserRepository(),
+      tokenRepository: new MongoTokenRepository(),
     };
 
     const service = {
       authService: new AuthService({
         userRepository: repository.userRepository,
         clientService: ClientDependency.service.clientService,
+        tokenService: new TokenService(repository.tokenRepository),
       }),
     };
 

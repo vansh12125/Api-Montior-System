@@ -1,9 +1,9 @@
-import BaseRepository from "./BaseRepository.js";
+import BaseUserRepository from "./BaseUserRepository.js";
 import { User } from "../../../models/index.js";
 import { logger } from "../../../configs/index.js";
 import { Roles } from "../../../enums/Roles.js";
 
-export default class MongoUserRepository extends BaseRepository {
+export default class MongoUserRepository extends BaseUserRepository {
   constructor() {
     super(User);
   }
@@ -92,13 +92,14 @@ export default class MongoUserRepository extends BaseRepository {
     }
   }
 
-  async findUserForLogin(context) {
+  async findUserForLogin(context, options = {}) {
     try {
       return await this.model
         .findOne({
           $or: [{ email: context }, { username: context }],
           role: { $ne: Roles.SUPER_ADMIN },
         })
+        .session(options.session || null)
         .select("+password");
     } catch (error) {
       logger.error(
