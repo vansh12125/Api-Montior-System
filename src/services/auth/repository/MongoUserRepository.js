@@ -1,16 +1,20 @@
 import BaseRepository from "./BaseRepository.js";
 import { User } from "../../../models/index.js";
 import { logger } from "../../../configs/index.js";
+import { Roles } from "../../../enums/Roles.js";
 
 export default class MongoUserRepository extends BaseRepository {
   constructor() {
     super(User);
   }
 
-  async create(userData) {
+  async create(userData, options = {}) {
     try {
       const user = new this.model(userData);
-      await user.save();
+
+      await user.save({
+        session: options.session,
+      });
       return user.toJSON();
     } catch (error) {
       logger.error(`Error occurred while creating user: ${error}`);
@@ -74,13 +78,32 @@ export default class MongoUserRepository extends BaseRepository {
     }
   }
 
-  async findByEmailOrUsername(email, username) {
+  async findByEmailOrUsername(email, username, options = {}) {
     try {
       return await this.model
         .findOne({ $or: [{ email }, { username }] })
+        .session(options.session || null)
         .select("-password");
     } catch (error) {
-      logger.error(`Error occurred while finding user by email or email: ${error}`);
+      logger.error(
+        `Error occurred while finding user by email or username: ${error}`,
+      );
+      throw error;
+    }
+  }
+
+  async findUserForLogin(context) {
+    try {
+      return await this.model
+        .findOne({
+          $or: [{ email: context }, { username: context }],
+          role: { $ne: Roles.SUPER_ADMIN },
+        })
+        .select("+password");
+    } catch (error) {
+      logger.error(
+        `Error occurred while finding user by email or email: ${error}`,
+      );
       throw error;
     }
   }

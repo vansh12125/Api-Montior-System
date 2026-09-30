@@ -9,7 +9,8 @@ const registerClientAdminSchema = joi.object({
     .min(VALIDATION.NAME.MIN_LENGTH)
     .max(VALIDATION.NAME.MAX_LENGTH)
     .required(),
-  username: joi.string()
+  username: joi
+    .string()
     .trim()
     .lowercase()
     .min(VALIDATION.USERNAME.MIN_LENGTH)
@@ -17,41 +18,57 @@ const registerClientAdminSchema = joi.object({
     .pattern(VALIDATION.USERNAME.PATTERN)
     .required(),
 
-  email: joi.string()
+  email: joi
+    .string()
     .trim()
     .lowercase()
     .email()
     .max(VALIDATION.EMAIL.MAX_LENGTH)
     .required(),
 
-  password: joi.string()
+  password: joi
+    .string()
     .min(VALIDATION.PASSWORD.MIN_LENGTH)
     .max(VALIDATION.PASSWORD.MAX_LENGTH)
     .required(),
 
-  clientName: joi.string()
+  clientName: joi
+    .string()
     .trim()
     .min(VALIDATION.CLIENT_NAME.MIN_LENGTH)
     .max(VALIDATION.CLIENT_NAME.MAX_LENGTH)
     .required(),
 
-  clientEmail: joi.string()
+  clientEmail: joi
+    .string()
     .trim()
     .lowercase()
     .email()
     .max(VALIDATION.EMAIL.MAX_LENGTH)
     .required(),
 
-  description: joi.string()
+  description: joi
+    .string()
     .trim()
     .max(VALIDATION.DESCRIPTION.MAX_LENGTH)
     .required(),
 
-  website: joi.string()
+  website: joi
+    .string()
     .trim()
     .uri()
     .max(VALIDATION.WEBSITE.MAX_LENGTH)
-    .required()
+    .required(),
 });
 
-export { registerClientAdminSchema };
+const loginClientSchema = joi.object({
+  context: joi.string().trim().lowercase().required(),
+
+  password: joi
+    .string()
+    .min(VALIDATION.PASSWORD.MIN_LENGTH)
+    .max(VALIDATION.PASSWORD.MAX_LENGTH)
+    .required(),
+});
+
+export { registerClientAdminSchema , loginClientSchema};

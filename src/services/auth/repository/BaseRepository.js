@@ -3,7 +3,7 @@ export default class BaseRepository {
     this.model = model;
   }
 
-  async create(data) {
+  async create(data,options) {
     throw new Error("Method not implemented");
   }
 
@@ -31,7 +31,11 @@ export default class BaseRepository {
     throw new Error("Method not implemented");
   }
 
-  async findByEmailOrUsername(email, username) {
+  async findByEmailOrUsername(email, username,options) {
+    throw new Error("Method not implemented");
+  }
+  
+  async findUserForLogin(context){
     throw new Error("Method not implemented");
   }
 }

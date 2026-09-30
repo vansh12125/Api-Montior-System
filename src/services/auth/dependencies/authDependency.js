@@ -1,6 +1,7 @@
 import MongoUserRepository from "../repository/MongoUserRepository.js";
 import AuthService from "../service/authService.js";
 import AuthController from "../controller/auth.controller.js";
+import ClientDependency from "../../client/dependencies/clientDependency.js";
 
 /**
  * Dependency Injection Container for the Auth module.
@@ -14,7 +15,10 @@ class AuthDependency {
     };
 
     const service = {
-      authService: new AuthService(repository.userRepository),
+      authService: new AuthService({
+        userRepository: repository.userRepository,
+        clientService: ClientDependency.service.clientService,
+      }),
     };
 
     const controller = {

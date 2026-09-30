@@ -28,4 +28,23 @@ export default class AuthController {
       next(error);
     }
   }
+
+  async loginUser(req, res, next) {
+    try {
+      const result =await this.authService.loginUser(req.body);
+      logger.debug("Client login successfully ");
+      return res
+        .status(200)
+        .json(
+          ResponseFormatter.success(
+            200,
+            "Client logged in successfull",
+            result,
+          ),
+        );
+    } catch (error) {
+      logger.error("Error occurred in loginUser: ", error);
+      next(error);
+    }
+  }
 }
