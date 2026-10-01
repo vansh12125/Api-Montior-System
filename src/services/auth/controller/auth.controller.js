@@ -47,4 +47,36 @@ export default class AuthController {
       next(error);
     }
   }
+
+  async getProfile(req, res, next) {
+    try {
+      const result = await this.authService.getProfile(req);
+      logger.debug("Fetched client profile successfully ");
+      return res
+        .status(200)
+        .json(
+          ResponseFormatter.success(
+            200,
+            "Fetched client profile successfully ",
+            result,
+          ),
+        );
+    } catch (error) {
+      logger.error("Error occurred in loginUser: ", error);
+      next(error);
+    }
+  }
+
+  async rotateRefreshToken(req, res,next) {
+    try {
+      const result =await this.authService.rotateRefreshToken(req, res);
+
+      return res
+        .status(200)
+        .json(ResponseFormatter.success(200, "Token refreshed", result));
+    } catch (error) {
+      logger.error("Error occurred in rotateRefreshToken: ", error);
+      next(error);
+    }
+  }
 }

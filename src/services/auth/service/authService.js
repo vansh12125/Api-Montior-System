@@ -143,12 +143,12 @@ export default class AuthService {
       }
 
       const sessionId = this.generateSessionId();
-      const accToken = await this.tokenService.generateAccessToken(
+      const accToken = this.tokenService.generateAccessToken(
         existingUser._id.toString(),
         sessionId,
         existingUser.role,
       );
-      const refToken = await this.tokenService.generateRefreshToken(
+      const refToken = this.tokenService.generateRefreshToken(
         existingUser._id.toString(),
         sessionId,
         existingUser.role,
@@ -167,7 +167,7 @@ export default class AuthService {
         httpOnly: config.jwt.cookie.httpOnly,
         secure: config.jwt.cookie.secure,
         sameSite: config.jwt.cookie.sameSite,
-        maxAge: config.jwt.cookie.refreshMaxAge,
+        maxAge: config.jwt.cookie.accessMaxAge,
         path: config.jwt.cookie.path,
       });
 
@@ -179,10 +179,135 @@ export default class AuthService {
         path: config.jwt.cookie.path,
       });
 
+      await session.commitTransaction();
+
       return "Logged in successfull";
     } catch (error) {
       await session.abortTransaction();
       logger.error(`Error occurred in loginUser: ${error}`);
+
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async getProfile(req) {
+    try {
+      const { uId } = req.user;
+
+      if (!uId) {
+        throw ApiError.unauthorized("Authentication required", {
+          code: "AUTHENTICATION_REQUIRED",
+        });
+      }
+
+      const user = await this.userRepository.findById(uId);
+
+      if (!user) {
+        throw ApiError.notFound("User not found", { code: "NOT_FOUND" });
+      }
+
+      return user;
+    } catch (error) {
+      logger.error(`Error occurred in getProfile Service: ${error}`);
+
+      throw error;
+    }
+  }
+
+  async rotateRefreshToken(req, res) {
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      const oldRefreshToken = req.cookies?.[config.jwt.cookie.refreshTokenName];
+
+      if (!oldRefreshToken) {
+        throw ApiError.unauthorized("Refresh token required", {
+          code: "REFRESH_TOKEN_REQUIRED",
+        });
+      }
+
+      const decoded =
+        await this.tokenService.verifyRefreshToken(oldRefreshToken);
+
+      const oldHash = this.tokenService.hashToken(oldRefreshToken);
+
+      const revokedToken = await this.tokenService.revokeRefreshToken(
+        oldHash,
+        decoded.sId,
+        { session },
+      );
+
+      if (!revokedToken) {
+        throw ApiError.unauthorized("Invalid refresh token", {
+          code: "INVALID_REFRESH_TOKEN",
+        });
+      }
+
+      const accessToken = this.tokenService.generateAccessToken(
+        decoded.uId,
+        decoded.sId,
+        decoded.role,
+      );
+
+      const refreshToken = this.tokenService.generateRefreshToken(
+        decoded.uId,
+        decoded.sId,
+        decoded.role,
+      );
+
+      await this.tokenService.saveTokenInDb(
+        refreshToken,
+        decoded.sId,
+        decoded.uId,
+        getClientInfo(req),
+        decoded.role,
+        { session },
+      );
+
+      await session.commitTransaction();
+
+      res.cookie(config.jwt.cookie.accessTokenName, accessToken, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.accessMaxAge,
+        path: config.jwt.cookie.path,
+      });
+
+      res.cookie(config.jwt.cookie.refreshTokenName, refreshToken, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.refreshMaxAge,
+        path: config.jwt.cookie.path,
+      });
+
+      return "Token refreshed successfully";
+    } catch (error) {
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
+
+      logger.error(`Error occurred in rotateRefreshToken: ${error}`);
+      req.user = null;
+      res.clearCookie(config.jwt.cookie.accessTokenName, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.accessMaxAge,
+        path: config.jwt.cookie.path,
+      });
+      res.clearCookie(config.jwt.cookie.refreshTokenName, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.refreshMaxAge,
+        path: config.jwt.cookie.path,
+      });
 
       throw error;
     } finally {

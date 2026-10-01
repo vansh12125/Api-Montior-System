@@ -22,4 +22,12 @@ export default class BaseTokenRepository {
   async findByUserId(userId, options) {
     throw new Error("Method not implemented");
   }
+
+  async findByTokenHashAndSessionId(tokenHash, sessionId, options) {
+    throw new Error("Method not implemented");
+  }
+
+  async findAndRevokeByTokenHashAndSessionId(tokenHash, sessionId, options) {
+    throw new Error("Method not implemented");
+  }
 }

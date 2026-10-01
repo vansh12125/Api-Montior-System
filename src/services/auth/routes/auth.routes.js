@@ -1,11 +1,15 @@
 import { Router } from "express";
 import dependencies from "../dependencies/authDependency.js";
 import { validate } from "../../../middlewares/validation.middleware.js";
-import { registerClientAdminSchema,loginClientSchema } from "../validations/auth.validation.js";
+import {
+  registerClientAdminSchema,
+  loginClientSchema,
+} from "../validations/auth.validation.js";
 
 const authRouter = Router();
-const { controller } = dependencies;
+const { controller,middleware } = dependencies;
 const authController = controller.authController;
+const jwtMiddleware=middleware.jwtMiddleware;
 
 authRouter.post(
   "/signup",
@@ -15,12 +19,16 @@ authRouter.post(
   },
 );
 
-authRouter.get(
-  "/signin",
-  validate(loginClientSchema),
-  (req, res, next) => {
-    authController.loginUser(req, res, next);
-  },
-);
+authRouter.post("/signin", validate(loginClientSchema), (req, res, next) => {
+  authController.loginUser(req, res, next);
+});
+
+authRouter.get("/me", jwtMiddleware, (req, res, next) => {
+  authController.getProfile(req, res, next);
+});
+
+authRouter.post("/refresh", (req, res, next) => {
+  authController.rotateRefreshToken(req, res,next);
+});
 
 export { authRouter };

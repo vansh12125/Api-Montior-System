@@ -2,6 +2,8 @@ import jwt from "jsonwebtoken";
 import config from "../../../constants/index.js";
 import { logger } from "../../../configs/index.js";
 import crypto from "crypto";
+import ApiError from "../../../error/ApiError.js";
+import { Roles } from "../../../enums/index.js";
 
 export default class TokenService {
   constructor(tokenRepository) {
@@ -11,7 +13,7 @@ export default class TokenService {
     this.tokenRepository = tokenRepository;
   }
 
-  async generateAccessToken(userId, sessionId, role) {
+  generateAccessToken(userId, sessionId, role) {
     return jwt.sign(
       { uId: userId, sId: sessionId, role: role, type: "acc" },
       config.jwt.accessSecret,
@@ -23,7 +25,7 @@ export default class TokenService {
     );
   }
 
-  async generateRefreshToken(userId, sessionId, role) {
+  generateRefreshToken(userId, sessionId, role) {
     return jwt.sign(
       { uId: userId, sId: sessionId, role: role, type: "ref" },
       config.jwt.refreshSecret,
@@ -35,9 +37,104 @@ export default class TokenService {
     );
   }
 
-  async verifyAccessToken(oldAccessToken) {}
+  async verifyAccessToken(oldAccessToken) {
+    try {
+      const decoded = jwt.verify(oldAccessToken, config.jwt.accessSecret, {
+        issuer: config.jwt.issuer,
+      });
 
-  async verifyRefreshToken(oldRefreshToken) {}
+      if (
+        typeof decoded !== "object" ||
+        decoded === null ||
+        typeof decoded.uId !== "string" ||
+        typeof decoded.sId !== "string" ||
+        !Object.values(Roles).includes(decoded.role) ||
+        decoded.type !== "acc"
+      ) {
+        throw ApiError.unauthorized("Invalid access token", {
+          code: "INVALID_ACCESS_TOKEN",
+        });
+      }
+
+      const refreshToken = await this.tokenRepository.findBySessionId(
+        decoded.sId,
+      );
+
+      if (!refreshToken || refreshToken.revoked) {
+        throw ApiError.unauthorized("Session has been revoked", {
+          code: "SESSION_REVOKED",
+        });
+      }
+
+      return decoded;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      throw ApiError.unauthorized("Invalid or expired access token", {
+        code: "INVALID_ACCESS_TOKEN",
+      });
+    }
+  }
+
+  async verifyRefreshToken(oldRefreshToken) {
+    try {
+      const decoded = jwt.verify(oldRefreshToken, config.jwt.refreshSecret, {
+        issuer: config.jwt.issuer,
+      });
+
+      if (
+        typeof decoded !== "object" ||
+        decoded === null ||
+        typeof decoded.uId !== "string" ||
+        typeof decoded.sId !== "string" ||
+        !Object.values(Roles).includes(decoded.role) ||
+        decoded.type !== "ref"
+      ) {
+        throw ApiError.unauthorized("Invalid refresh token", {
+          code: "INVALID_REFRESH_TOKEN",
+        });
+      }
+
+      const oldHash = this.hashToken(oldRefreshToken);
+
+      const oldData = await this.tokenRepository.findByTokenHashAndSessionId(
+        oldHash,
+        decoded.sId,
+      );
+
+      if (!oldData || oldData.revoked) {
+        throw ApiError.unauthorized("Invalid refresh token", {
+          code: "INVALID_REFRESH_TOKEN",
+        });
+      }
+
+      return decoded;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      throw ApiError.unauthorized("Invalid or expired refresh token", {
+        code: "INVALID_REFRESH_TOKEN",
+      });
+    }
+  }
+
+  async revokeRefreshToken(tokenHash, sessionId, options = {}) {
+    try {
+      return await this.tokenRepository.findAndRevokeByTokenHashAndSessionId(
+        tokenHash,
+        sessionId,
+        options,
+      );
+    } catch (error) {
+      logger.error(`Error occurred in revokeRefreshToken: ${error}`);
+
+      throw error;
+    }
+  }
 
   hashToken(rawToken) {
     return crypto.createHash("sha256").update(rawToken).digest("hex");

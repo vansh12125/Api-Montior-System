@@ -4,6 +4,7 @@ import AuthService from "../service/authService.js";
 import TokenService from "../service/tokenService.js";
 import AuthController from "../controller/auth.controller.js";
 import ClientDependency from "../../client/dependencies/clientDependency.js";
+import jwtMiddleware from "../../../middlewares/jwtAuth.middleware.js";
 
 /**
  * Dependency Injection Container for the Auth module.
@@ -17,11 +18,14 @@ class AuthDependency {
       tokenRepository: new MongoTokenRepository(),
     };
 
+    const tokenService = new TokenService(repository.tokenRepository);
+
     const service = {
+      tokenService,
       authService: new AuthService({
         userRepository: repository.userRepository,
         clientService: ClientDependency.service.clientService,
-        tokenService: new TokenService(repository.tokenRepository),
+        tokenService,
       }),
     };
 
@@ -29,7 +33,11 @@ class AuthDependency {
       authController: new AuthController(service.authService),
     };
 
-    return { repository, service, controller };
+    const middleware = {
+      jwtMiddleware: jwtMiddleware(service.tokenService),
+    };
+
+    return { repository, service, controller, middleware };
   }
 }
 

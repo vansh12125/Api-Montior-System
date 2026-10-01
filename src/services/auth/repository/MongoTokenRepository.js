@@ -41,9 +41,14 @@ export default class MongoTokenRepository extends BaseTokenRepository {
 
   async findBySessionId(sessionId, options = {}) {
     try {
-      throw new Error("Method not implemented");
+      return await this.model
+        .findOne({
+          sessionId,
+          revoked: false,
+        })
+        .session(options.session || null);
     } catch (error) {
-      logger.error(`Error occured in findBySessionId: ${error}`);
+      logger.error(`Error occurred in findBySessionId: ${error}`);
       throw error;
     }
   }
@@ -53,6 +58,47 @@ export default class MongoTokenRepository extends BaseTokenRepository {
       throw new Error("Method not implemented");
     } catch (error) {
       logger.error(`Error occured in findByUserId : ${error}`);
+      throw error;
+    }
+  }
+
+  async findAndRevokeByTokenHashAndSessionId(
+    tokenHash,
+    sessionId,
+    options = {},
+  ) {
+    try {
+      return await this.model.findOneAndUpdate(
+        {
+          tokenHash,
+          sessionId,
+          revoked: false,
+        },
+        {
+          $set: {
+            revoked: true,
+          },
+        },
+        {
+          returnDocument: "before",
+          session: options.session || null,
+        },
+      );
+    } catch (error) {
+      logger.error(
+        `Error occurred in findAndRevokeByTokenHashAndSessionId: ${error}`,
+      );
+      throw error;
+    }
+  }
+
+  async findByTokenHashAndSessionId(tokenHash, sessionId, options = {}) {
+    try {
+      return await this.model
+        .findOne({ tokenHash, sessionId, revoked: false })
+        .session(options.session || null);
+    } catch (error) {
+      logger.error(`Error occurred in findByTokenHashAndSessionId: ${error}`);
       throw error;
     }
   }
