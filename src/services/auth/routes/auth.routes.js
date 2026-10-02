@@ -7,9 +7,9 @@ import {
 } from "../validations/auth.validation.js";
 
 const authRouter = Router();
-const { controller,middleware } = dependencies;
+const { controller, middleware } = dependencies;
 const authController = controller.authController;
-const jwtMiddleware=middleware.jwtMiddleware;
+const jwtMiddleware = middleware.jwtMiddleware;
 
 authRouter.post(
   "/signup",
@@ -28,7 +28,15 @@ authRouter.get("/me", jwtMiddleware, (req, res, next) => {
 });
 
 authRouter.post("/refresh", (req, res, next) => {
-  authController.rotateRefreshToken(req, res,next);
+  authController.rotateRefreshToken(req, res, next);
+});
+
+authRouter.get("/signout",jwtMiddleware, (req, res, next) => {
+  authController.logout(req, res, next);
+});
+
+authRouter.get("/signout/all",jwtMiddleware, (req, res, next) => {
+  authController.logoutAllSession(req, res, next);
 });
 
 export { authRouter };

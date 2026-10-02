@@ -30,4 +30,12 @@ export default class BaseTokenRepository {
   async findAndRevokeByTokenHashAndSessionId(tokenHash, sessionId, options) {
     throw new Error("Method not implemented");
   }
+
+  async findBySessionIdAndRevoke( sessionId, options) {
+    throw new Error("Method not implemented");
+  }
+
+  async findByUserIdAndRevoke(userId, options) {
+    throw new Error("Method not implemented");
+  }
 }

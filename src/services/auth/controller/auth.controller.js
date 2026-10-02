@@ -67,15 +67,41 @@ export default class AuthController {
     }
   }
 
-  async rotateRefreshToken(req, res,next) {
+  async rotateRefreshToken(req, res, next) {
     try {
-      const result =await this.authService.rotateRefreshToken(req, res);
+      const result = await this.authService.rotateRefreshToken(req, res);
 
       return res
         .status(200)
         .json(ResponseFormatter.success(200, "Token refreshed", result));
     } catch (error) {
       logger.error("Error occurred in rotateRefreshToken: ", error);
+      next(error);
+    }
+  }
+
+  async logout(req, res, next) {
+    try {
+      const result = await this.authService.logoutUser(req, res);
+
+      return res
+        .status(200)
+        .json(ResponseFormatter.success(200, "Log out successfull", result));
+    } catch (error) {
+      logger.error("Error occurred in logout controller: ", error);
+      next(error);
+    }
+  }
+
+  async logoutAllSession(req, res, next) {
+    try {
+      const result = await this.authService.logoutUserAllSession(req, res);
+
+      return res
+        .status(200)
+        .json(ResponseFormatter.success(200, "Log out successfull", result));
+    } catch (error) {
+      logger.error("Error occurred in logoutAllSession controller: ", error);
       next(error);
     }
   }

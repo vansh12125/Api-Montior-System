@@ -102,4 +102,52 @@ export default class MongoTokenRepository extends BaseTokenRepository {
       throw error;
     }
   }
+
+  async findBySessionIdAndRevoke(sessionId, options = {}) {
+    try {
+      return await this.model.updateMany(
+        {
+          sessionId,
+          revoked: false,
+        },
+        {
+          $set: {
+            revoked: true,
+          },
+        },
+        {
+          session: options.session || null,
+        },
+      );
+    } catch (error) {
+      logger.error(
+        `Error occurred in findBySessionIdAndRevoke: ${error}`,
+      );
+      throw error;
+    }
+  }
+
+  async findByUserIdAndRevoke(userId, options = {}) {
+    try {
+      return await this.model.updateMany(
+        {
+          userId,
+          revoked: false,
+        },
+        {
+          $set: {
+            revoked: true,
+          },
+        },
+        {
+          session: options.session || null,
+        },
+      );
+    } catch (error) {
+      logger.error(
+        `Error occurred in findByUserIdAndRevoke: ${error}`,
+      );
+      throw error;
+    }
+  }
 }

@@ -166,4 +166,28 @@ export default class TokenService {
       throw error;
     }
   }
+
+  async findBySessionIdAndRevoke(sessionId) {
+    try {
+      return await this.tokenRepository.findBySessionIdAndRevoke(sessionId);
+    } catch (error) {
+      logger.error(
+        `Error occurred in findBySessionIdAndRevoke token service: ${error}`,
+      );
+
+      throw error;
+    }
+  }
+
+  async findByUserIdAndRevoke(userId) {
+    try {
+      return await this.tokenRepository.findByUserIdAndRevoke(userId);
+    } catch (error) {
+      logger.error(
+        `Error occurred in findByUserIdAndRevoke token service: ${error}`,
+      );
+
+      throw error;
+    }
+  }
 }

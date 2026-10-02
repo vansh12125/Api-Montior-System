@@ -314,4 +314,74 @@ export default class AuthService {
       await session.endSession();
     }
   }
+
+  async logoutUser(req, res) {
+    try {
+      const sessionId = req.user.sId;
+      if (!sessionId) {
+        throw ApiError.unauthorized("Authentication Required", {
+          code: "AUTHENTICATION_REQUIRED",
+        });
+      }
+
+      await this.tokenService.findBySessionIdAndRevoke(sessionId);
+
+      req.user = null;
+      res.clearCookie(config.jwt.cookie.accessTokenName, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.accessMaxAge,
+        path: config.jwt.cookie.path,
+      });
+      res.clearCookie(config.jwt.cookie.refreshTokenName, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.refreshMaxAge,
+        path: config.jwt.cookie.path,
+      });
+
+      return "Logout successfull";
+    } catch (error) {
+      logger.error(`Error occurred in logout user service: ${error}`);
+      throw error;
+    }
+  }
+
+  async logoutUserAllSession(req, res) {
+    try {
+      const userId = req.user.uId;
+      if (!userId) {
+        throw ApiError.unauthorized("Authentication Required", {
+          code: "AUTHENTICATION_REQUIRED",
+        });
+      }
+
+      await this.tokenService.findByUserIdAndRevoke(userId);
+
+      req.user = null;
+      res.clearCookie(config.jwt.cookie.accessTokenName, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.accessMaxAge,
+        path: config.jwt.cookie.path,
+      });
+      res.clearCookie(config.jwt.cookie.refreshTokenName, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.refreshMaxAge,
+        path: config.jwt.cookie.path,
+      });
+
+      return "Logout successfull";
+    } catch (error) {
+      logger.error(
+        `Error occurred in logout user all session service: ${error}`,
+      );
+      throw error;
+    }
+  }
 }
