@@ -2,6 +2,13 @@ import joi from "joi";
 
 import { VALIDATION } from "../../../constants/validation.js";
 
+const passwordSchema = joi
+  .string()
+  .custom((value) => value.replace(/\s/g, ""))
+  .min(VALIDATION.PASSWORD.MIN_LENGTH)
+  .max(VALIDATION.PASSWORD.MAX_LENGTH)
+  .required();
+
 const registerClientAdminSchema = joi.object({
   name: joi
     .string()
@@ -26,11 +33,7 @@ const registerClientAdminSchema = joi.object({
     .max(VALIDATION.EMAIL.MAX_LENGTH)
     .required(),
 
-  password: joi
-    .string()
-    .min(VALIDATION.PASSWORD.MIN_LENGTH)
-    .max(VALIDATION.PASSWORD.MAX_LENGTH)
-    .required(),
+  password: passwordSchema,
 
   clientName: joi
     .string()
@@ -64,11 +67,17 @@ const registerClientAdminSchema = joi.object({
 const loginClientSchema = joi.object({
   context: joi.string().trim().lowercase().required(),
 
-  password: joi
-    .string()
-    .min(VALIDATION.PASSWORD.MIN_LENGTH)
-    .max(VALIDATION.PASSWORD.MAX_LENGTH)
-    .required(),
+  password: passwordSchema,
 });
 
-export { registerClientAdminSchema , loginClientSchema};
+const updatePasswordSchema = joi.object({
+  currentPassword: passwordSchema,
+
+  newPassword: passwordSchema
+    .invalid(joi.ref("currentPassword"))
+    .messages({
+      "any.invalid": "New password must be different from current password",
+    }),
+});
+
+export { registerClientAdminSchema, loginClientSchema, updatePasswordSchema };

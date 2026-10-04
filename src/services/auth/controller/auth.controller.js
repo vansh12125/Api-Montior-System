@@ -105,4 +105,23 @@ export default class AuthController {
       next(error);
     }
   }
+
+  async updateUserPassword(req, res, next) {
+    try {
+      const result = await this.authService.updateUserPassword(req, res);
+
+      return res
+        .status(200)
+        .json(
+          ResponseFormatter.success(
+            200,
+            "Password updated successfully",
+            result,
+          ),
+        );
+    } catch (error) {
+      logger.error("Error occurred in updateUserPassword controller: ", error);
+      next(error);
+    }
+  }
 }

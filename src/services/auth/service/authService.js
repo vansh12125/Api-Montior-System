@@ -1,7 +1,10 @@
 import mongoose from "mongoose";
 
 import ApiError from "../../../error/ApiError.js";
-import { hashPassword, verifyPassword } from "../../shared/service/bcryptService.js";
+import {
+  hashPassword,
+  verifyPassword,
+} from "../../shared/service/bcryptService.js";
 import { Roles } from "../../../enums/index.js";
 import { logger } from "../../../configs/index.js";
 import crypto from "crypto";
@@ -382,6 +385,57 @@ export default class AuthService {
         `Error occurred in logout user all session service: ${error}`,
       );
       throw error;
+    }
+  }
+
+  async updateUserPassword(req, res) {
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
+
+      const { uId } = req.user;
+
+      const { currentPassword, newPassword } = req.body;
+
+      if (!uId) {
+        throw ApiError.unauthorized("Authentication required", {
+          code: "AUTHENTICATION_REQUIRED",
+        });
+      }
+
+      const user = await this.userRepository.findByIdWithPassword(uId, {
+        session,
+      });
+
+      if (!user) {
+        throw ApiError.notFound("User not found", { code: "NOT_FOUND" });
+      }
+
+      const isPassCorrect = await verifyPassword(
+        currentPassword,
+        user.password,
+      );
+
+      if (!isPassCorrect) {
+        throw ApiError.unauthorized("Incorrect password", {
+          code: "INVALID_CREDENTIALS",
+        });
+      }
+
+      const hashedPassword = await hashPassword(newPassword);
+      await this.userRepository.updateUserPassword(uId, hashedPassword, {
+        session,
+      });
+
+      await session.commitTransaction();
+      return "Password Updated";
+    } catch (error) {
+      await session.abortTransaction();
+
+      logger.error(`Error occurred in updateUserPassword service: ${error}`);
+      throw error;
+    } finally {
+      await session.endSession();
     }
   }
 }

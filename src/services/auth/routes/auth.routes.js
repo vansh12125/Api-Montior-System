@@ -4,6 +4,7 @@ import { validate } from "../../../middlewares/validation.middleware.js";
 import {
   registerClientAdminSchema,
   loginClientSchema,
+  updatePasswordSchema,
 } from "../validations/auth.validation.js";
 
 const authRouter = Router();
@@ -31,12 +32,21 @@ authRouter.post("/refresh", (req, res, next) => {
   authController.rotateRefreshToken(req, res, next);
 });
 
-authRouter.get("/signout",jwtMiddleware, (req, res, next) => {
+authRouter.get("/signout", jwtMiddleware, (req, res, next) => {
   authController.logout(req, res, next);
 });
 
-authRouter.get("/signout/all",jwtMiddleware, (req, res, next) => {
+authRouter.get("/signout/all", jwtMiddleware, (req, res, next) => {
   authController.logoutAllSession(req, res, next);
 });
+
+authRouter.patch(
+  "/password",
+  jwtMiddleware,
+  validate(updatePasswordSchema),
+  (req, res, next) => {
+    authController.updateUserPassword(req, res, next);
+  },
+);
 
 export { authRouter };

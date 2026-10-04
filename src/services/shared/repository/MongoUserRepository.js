@@ -34,6 +34,29 @@ export default class MongoUserRepository extends BaseUserRepository {
     }
   }
 
+  async findByIdWithPassword(userId, options = {}) {
+    try {
+      return await this.model
+        .findById(userId)
+        .session(options.session || null)
+        .select("+password");
+    } catch (error) {
+      logger.error(`Error occurred while finding user by id: ${error}`);
+      throw error;
+    }
+  }
+
+  async updateUserPassword(userId, newPassword, options = {}) {
+    try {
+      return await this.model
+        .updateOne({ _id: userId }, { $set: { password: newPassword } })
+        .session(options.session || null);
+    } catch (error) {
+      logger.error(`Error occurred while finding user by id: ${error}`);
+      throw error;
+    }
+  }
+
   async findByUsername(username, options = {}) {
     try {
       return await this.model
