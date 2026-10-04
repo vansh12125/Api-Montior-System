@@ -1,4 +1,4 @@
-import MongoUserRepository from "../repository/MongoUserRepository.js";
+import sharedDependencies from "../../shared/dependencies/sharedDependency.js";
 import MongoTokenRepository from "../repository/MongoTokenRepository.js";
 import AuthService from "../service/authService.js";
 import TokenService from "../service/tokenService.js";
@@ -14,7 +14,7 @@ import jwtMiddleware from "../../../middlewares/jwtAuth.middleware.js";
 class AuthDependency {
   static init() {
     const repository = {
-      userRepository: new MongoUserRepository(),
+      userRepository: sharedDependencies.repository.userRepository,
       tokenRepository: new MongoTokenRepository(),
     };
 

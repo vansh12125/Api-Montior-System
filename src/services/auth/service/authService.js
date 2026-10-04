@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 import ApiError from "../../../error/ApiError.js";
-import { hashPassword, verifyPassword } from "../../bcryptService.js";
+import { hashPassword, verifyPassword } from "../../shared/service/bcryptService.js";
 import { Roles } from "../../../enums/index.js";
 import { logger } from "../../../configs/index.js";
 import crypto from "crypto";

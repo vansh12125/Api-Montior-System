@@ -21,9 +21,11 @@ export default class MongoClientRepository extends BaseClientRepository {
     }
   }
 
-  async findById(clientId) {
+  async findById(clientId, options = {}) {
     try {
-      return await this.model.findById(clientId);
+      return await this.model
+        .findById(clientId)
+        .session(options.session || null);
     } catch (error) {
       logger.error(`Error occurred while finding client by id: ${error}`);
       throw error;

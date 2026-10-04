@@ -22,27 +22,35 @@ export default class MongoUserRepository extends BaseUserRepository {
     }
   }
 
-  async findById(userId) {
+  async findById(userId, options = {}) {
     try {
-      return await this.model.findById(userId).select("-password");
+      return await this.model
+        .findById(userId)
+        .session(options.session || null)
+        .select("-password");
     } catch (error) {
       logger.error(`Error occurred while finding user by id: ${error}`);
       throw error;
     }
   }
 
-  async findByUsername(username) {
+  async findByUsername(username,options={}) {
     try {
-      return await this.model.findOne({ username }).select("-password");
+      return await this.model.findOne({ username })
+       .session(options.session || null)
+       .select("-password");
     } catch (error) {
       logger.error(`Error occurred while finding user by username: ${error}`);
       throw error;
     }
   }
 
-  async findByEmail(email) {
+  async findByEmail(email, options = {}) {
     try {
-      return await this.model.findOne({ email }).select("-password");
+      return await this.model
+        .findOne({ email })
+        .session(options.session || null)
+        .select("-password");
     } catch (error) {
       logger.error(`Error occurred while finding user by email: ${error}`);
       throw error;
