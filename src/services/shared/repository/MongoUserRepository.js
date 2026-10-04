@@ -34,11 +34,12 @@ export default class MongoUserRepository extends BaseUserRepository {
     }
   }
 
-  async findByUsername(username,options={}) {
+  async findByUsername(username, options = {}) {
     try {
-      return await this.model.findOne({ username })
-       .session(options.session || null)
-       .select("-password");
+      return await this.model
+        .findOne({ username })
+        .session(options.session || null)
+        .select("-password");
     } catch (error) {
       logger.error(`Error occurred while finding user by username: ${error}`);
       throw error;
@@ -53,6 +54,18 @@ export default class MongoUserRepository extends BaseUserRepository {
         .select("-password");
     } catch (error) {
       logger.error(`Error occurred while finding user by email: ${error}`);
+      throw error;
+    }
+  }
+
+  async findAllClientViewer(clientId, options = {}) {
+    try {
+      return await this.model
+        .find({ clientId, role: Roles.CLIENT_VIEWER })
+        .session(options.session || null)
+        .select("-password");
+    } catch (error) {
+      logger.error(`Error occurred while finding user by clientId: ${error}`);
       throw error;
     }
   }

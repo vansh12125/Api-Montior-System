@@ -79,21 +79,7 @@ export default class ClientService {
       session.startTransaction();
 
       const { name, email } = req.body;
-      const userId = req.user.uId;
-
-      const existingUser = await this.userRepository.findById(userId, {
-        session,
-      });
-
-      if (!existingUser) {
-        throw ApiError.notFound("User not found", { code: "NOT_FOUND" });
-      }
-
-      if (existingUser.role !== Roles.CLIENT_ADMIN) {
-        throw ApiError.forbidden("Only client admin can create viewers", {
-          code: "INSUFFICIENT_PERMISSION",
-        });
-      }
+      const clientId = req.user.clientId;
 
       if (await this.userRepository.findByEmail(email, { session })) {
         throw ApiError.conflict("Email already exist", {
@@ -101,10 +87,9 @@ export default class ClientService {
         });
       }
 
-       const client = await this.clientRepository.findById(
-        existingUser.clientId,
-        { session },
-      );
+      const client = await this.clientRepository.findById(clientId, {
+        session,
+      });
 
       if (!client) {
         throw ApiError.notFound("Client not found", {
@@ -122,14 +107,20 @@ export default class ClientService {
           email,
           password: await hashPassword(tempPass),
           role: Roles.CLIENT_VIEWER,
-          clientId: existingUser.clientId,
+          clientId: clientId,
         },
         { session },
       );
 
       await session.commitTransaction();
 
-      await this.emailService.sendEmail(email, client.name, name, username, tempPass);
+      await this.emailService.sendEmail(
+        email,
+        client.name,
+        name,
+        username,
+        tempPass,
+      );
 
       return user;
     } catch (error) {
@@ -140,6 +131,17 @@ export default class ClientService {
       throw error;
     } finally {
       await session.endSession();
+    }
+  }
+
+  async getAllClientViewer(req, res) {
+    try {
+      const clientId = req.user.clientId;
+      return await this.userRepository.findAllClientViewer(clientId);
+    } catch (error) {
+      logger.error(`Error occurred in getAllClientViewer  : ${error}`);
+
+      throw error;
     }
   }
 

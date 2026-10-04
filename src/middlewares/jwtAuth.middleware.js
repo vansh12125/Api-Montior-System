@@ -1,4 +1,3 @@
-import TokenService from "../services/auth/service/tokenService.js";
 import config from "../constants/index.js";
 import ApiError from "../error/ApiError.js";
 import { logger } from "../configs/index.js";
@@ -28,6 +27,7 @@ const jwtMiddleware = (tokenService) => {
       logger.debug(`User jwt verified`);
       next();
     } catch (error) {
+      logger.error(`Error occurred in Jwt Middleware: ${error}`);
       next(error);
     }
   };

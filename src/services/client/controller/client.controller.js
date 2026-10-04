@@ -11,7 +11,7 @@ export default class ClientController {
 
   async registerClientViewer(req, res, next) {
     try {
-      const result =await this.clientService.createViewer(req, res);
+      const result = await this.clientService.createViewer(req, res);
 
       return res
         .status(201)
@@ -24,6 +24,19 @@ export default class ClientController {
         );
     } catch (error) {
       logger.error("Error occurred in registerClientViewer: ", error);
+      next(error);
+    }
+  }
+
+  async getAllClientViewer(req, res, next) {
+    try {
+      const result = await this.clientService.getAllClientViewer(req, res);
+
+      return res
+        .status(200)
+        .json(ResponseFormatter.success(200, "fetched client viewers", result));
+    } catch (error) {
+      logger.error("Error occurred in getAllClientViewer: ", error);
       next(error);
     }
   }
