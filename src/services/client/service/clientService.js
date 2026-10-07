@@ -4,6 +4,7 @@ import { Roles } from "../../../enums/index.js";
 import {
   generateRandomSecurePassword,
   hashPassword,
+  generateApiKey,
 } from "../../shared/service/bcryptService.js";
 import mongoose from "mongoose";
 
@@ -21,6 +22,10 @@ export default class ClientService {
       throw new Error("User repository is required");
     }
 
+    if (!dependencies.apiKeyRepository) {
+      throw new Error("ApiKey repository is required");
+    }
+
     if (!dependencies.emailService) {
       throw new Error("Email service is required");
     }
@@ -28,6 +33,7 @@ export default class ClientService {
     this.clientRepository = dependencies.clientRepository;
     this.userRepository = dependencies.userRepository;
     this.emailService = dependencies.emailService;
+    this.apiKeyRepository = dependencies.apiKeyRepository;
   }
 
   async createClient(clientData, options = {}) {
@@ -215,6 +221,73 @@ export default class ClientService {
     } catch (error) {
       logger.error(`Error occurred in getAllClientAdmin  : ${error}`);
 
+      throw error;
+    }
+  }
+
+  async createApiKey(req, res) {
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
+      const clientId = req.user.clientId;
+      const userId = req.user.uId;
+
+      const { name, description, enivornment } = req.body;
+
+      const client = await this.clientRepository.findById(clientId, {
+        session,
+      });
+
+      if (!client) {
+        throw ApiError.notFound("Client not found", {
+          code: "CLIENT_NOT_FOUND",
+        });
+      }
+
+      const keyValue = generateApiKey(enivornment);
+      const hashKey = await hashPassword(keyValue);
+
+      const apiKey = await this.apiKeyRepository.create(
+        {
+          name,
+          description,
+          enivornment,
+          clientId,
+          createdBy: userId,
+          keyValue: hashKey,
+        },
+        { session },
+      );
+
+      await session.commitTransaction();
+      return {
+        ...apiKey,
+        keyValue,
+      };
+    } catch (error) {
+      await session.abortTransaction();
+
+      logger.error(`Error occurred in createApiKey: ${error}`);
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async getAllApiKey(req, res) {
+    try {
+      const clientId = req.user.clientId;
+      const client = await this.clientRepository.findById(clientId);
+
+      if (!client) {
+        throw ApiError.notFound("Client not found", {
+          code: "CLIENT_NOT_FOUND",
+        });
+      }
+
+      return await this.apiKeyRepository.findByClient(clientId);
+    } catch (error) {
+      logger.error(`Error occurred in getAllApiKey: ${error}`);
       throw error;
     }
   }

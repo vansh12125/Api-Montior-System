@@ -72,4 +72,42 @@ export default class ClientController {
       next(error);
     }
   }
+
+  async createApiKey(req, res, next) {
+    try {
+      const result = await this.clientService.createApiKey(req, res);
+
+      return res
+        .status(201)
+        .json(
+          ResponseFormatter.success(
+            201,
+            "Api Key created successfully",
+            result,
+          ),
+        );
+    } catch (error) {
+      logger.error("Error occurred in createApiKey: ", error);
+      next(error);
+    }
+  }
+
+  async getAllApiKey(req, res, next) {
+    try {
+      const result = await this.clientService.getAllApiKey(req, res);
+
+      return res
+        .status(200)
+        .json(
+          ResponseFormatter.success(
+            200,
+            "Fetched All Api Keys successfully",
+            result,
+          ),
+        );
+    } catch (error) {
+      logger.error("Error occurred in getAllApiKey: ", error);
+      next(error);
+    }
+  }
 }

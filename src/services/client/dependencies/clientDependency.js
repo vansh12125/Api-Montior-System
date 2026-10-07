@@ -3,12 +3,14 @@ import securityDependencies from "../../shared/dependencies/securityDependency.j
 import ClientService from "../service/clientService.js";
 import ClientController from "../controller/client.controller.js";
 import MongoClientRepository from "../repository/MongoClientRepository.js";
+import MongoApiKeyRepository from "../repository/MongoApiKeyRepository.js";
 
 class ClientDependency {
   static init() {
     const repository = {
       clientRepository: new MongoClientRepository(),
       userRepository: sharedDependencies.repository.userRepository,
+      apiKeyRepository: new MongoApiKeyRepository(),
     };
 
     const service = {
@@ -16,6 +18,7 @@ class ClientDependency {
         clientRepository: repository.clientRepository,
         userRepository: repository.userRepository,
         emailService: sharedDependencies.service.emailService,
+        apiKeyRepository: repository.apiKeyRepository,
       }),
     };
 
