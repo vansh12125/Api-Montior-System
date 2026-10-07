@@ -1,1 +1,1 @@
-export * from "./bcryptService.js"
+export * from "./shared/service/bcryptService.js";

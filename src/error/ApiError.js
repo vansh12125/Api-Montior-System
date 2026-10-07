@@ -1,9 +1,13 @@
 export default class ApiError extends Error {
   constructor(message, statusCode, error) {
     super(message);
+
     this.name = "AppError";
     this.statusCode = statusCode;
     this.error = error;
+    this.isOperational = true;
+
+    Error.captureStackTrace(this, this.constructor);
   }
 
   static badRequest(message, error) {

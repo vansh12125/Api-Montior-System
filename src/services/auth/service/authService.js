@@ -1,0 +1,441 @@
+import mongoose from "mongoose";
+
+import ApiError from "../../../error/ApiError.js";
+import {
+  hashPassword,
+  verifyPassword,
+} from "../../shared/service/bcryptService.js";
+import { Roles } from "../../../enums/index.js";
+import { logger } from "../../../configs/index.js";
+import crypto from "crypto";
+import config from "../../../constants/index.js";
+import { getClientInfo } from "../../../utils/index.js";
+
+export default class AuthService {
+  constructor(dependencies) {
+    if (!dependencies) {
+      throw new Error("Dependencies are required");
+    }
+
+    if (!dependencies.userRepository) {
+      throw new Error("User repository is required");
+    }
+
+    if (!dependencies.clientService) {
+      throw new Error("Client Service is required");
+    }
+
+    if (!dependencies.tokenService) {
+      throw new Error("Token Service is required");
+    }
+
+    this.userRepository = dependencies.userRepository;
+    this.clientService = dependencies.clientService;
+    this.tokenService = dependencies.tokenService;
+  }
+
+  generateSessionId = () => {
+    return crypto.randomBytes(32).toString("hex");
+  };
+
+  async registerClientAdmin(reqBody) {
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      const {
+        name,
+        username,
+        email,
+        password,
+        clientName,
+        clientEmail,
+        description,
+        website,
+      } = reqBody;
+
+      const existingUser = await this.userRepository.findByEmailOrUsername(
+        email,
+        username,
+        { session },
+      );
+
+      if (existingUser) {
+        if (existingUser.email === email) {
+          throw ApiError.conflict("Email already exists", {
+            field: "email",
+            code: "EMAIL_ALREADY_EXISTS",
+          });
+        }
+
+        if (existingUser.username === username) {
+          throw ApiError.conflict("Username already exists", {
+            field: "username",
+            code: "USERNAME_ALREADY_EXISTS",
+          });
+        }
+      }
+
+      const client = await this.clientService.createClient(
+        {
+          name: clientName,
+          email: clientEmail,
+          description,
+          website,
+        },
+        { session },
+      );
+
+      const hashedPassword = await hashPassword(password);
+
+      const user = await this.userRepository.create(
+        {
+          name,
+          username,
+          email,
+          password: hashedPassword,
+          role: Roles.CLIENT_ADMIN,
+          clientId: client._id,
+        },
+        { session },
+      );
+
+      await this.clientService.setCreatedBy(client._id, user._id, { session });
+
+      await session.commitTransaction();
+
+      return user;
+    } catch (error) {
+      await session.abortTransaction();
+
+      logger.error(`Error occurred in registerClientAdmin: ${error}`);
+
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async loginUser(req, res) {
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
+
+      const { context, password } = req.body;
+
+      const existingUser = await this.userRepository.findUserForLogin(context, {
+        session,
+      });
+
+      if (!existingUser) {
+        throw ApiError.unauthorized("Invalid username/email or password", {
+          code: "INVALID_CREDENTIALS",
+        });
+      }
+
+      const isPassCorrect = await verifyPassword(
+        password,
+        existingUser.password,
+      );
+
+      if (!isPassCorrect) {
+        throw ApiError.unauthorized("Invalid username/email or password", {
+          code: "INVALID_CREDENTIALS",
+        });
+      }
+
+      const sessionId = this.generateSessionId();
+      const accToken = this.tokenService.generateAccessToken(
+        existingUser._id.toString(),
+        sessionId,
+        existingUser.role,
+      );
+      const refToken = this.tokenService.generateRefreshToken(
+        existingUser._id.toString(),
+        sessionId,
+        existingUser.role,
+      );
+
+      await this.tokenService.saveTokenInDb(
+        refToken,
+        sessionId,
+        existingUser._id.toString(),
+        getClientInfo(req),
+        existingUser.role,
+        { session },
+      );
+
+      res.cookie(config.jwt.cookie.accessTokenName, accToken, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.accessMaxAge,
+        path: config.jwt.cookie.path,
+      });
+
+      res.cookie(config.jwt.cookie.refreshTokenName, refToken, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.refreshMaxAge,
+        path: config.jwt.cookie.path,
+      });
+
+      await session.commitTransaction();
+
+      return "Logged in successfull";
+    } catch (error) {
+      await session.abortTransaction();
+      logger.error(`Error occurred in loginUser: ${error}`);
+
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async getProfile(req) {
+    try {
+      const { uId } = req.user;
+
+      if (!uId) {
+        throw ApiError.unauthorized("Authentication required", {
+          code: "AUTHENTICATION_REQUIRED",
+        });
+      }
+
+      const user = await this.userRepository.findById(uId);
+
+      if (!user) {
+        throw ApiError.notFound("User not found", { code: "NOT_FOUND" });
+      }
+
+      return user;
+    } catch (error) {
+      logger.error(`Error occurred in getProfile Service: ${error}`);
+
+      throw error;
+    }
+  }
+
+  async rotateRefreshToken(req, res) {
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      const oldRefreshToken = req.cookies?.[config.jwt.cookie.refreshTokenName];
+
+      if (!oldRefreshToken) {
+        throw ApiError.unauthorized("Refresh token required", {
+          code: "REFRESH_TOKEN_REQUIRED",
+        });
+      }
+
+      const decoded =
+        await this.tokenService.verifyRefreshToken(oldRefreshToken);
+
+      const oldHash = this.tokenService.hashToken(oldRefreshToken);
+
+      const revokedToken = await this.tokenService.revokeRefreshToken(
+        oldHash,
+        decoded.sId,
+        { session },
+      );
+
+      if (!revokedToken) {
+        throw ApiError.unauthorized("Invalid refresh token", {
+          code: "INVALID_REFRESH_TOKEN",
+        });
+      }
+
+      const accessToken = this.tokenService.generateAccessToken(
+        decoded.uId,
+        decoded.sId,
+        decoded.role,
+      );
+
+      const refreshToken = this.tokenService.generateRefreshToken(
+        decoded.uId,
+        decoded.sId,
+        decoded.role,
+      );
+
+      await this.tokenService.saveTokenInDb(
+        refreshToken,
+        decoded.sId,
+        decoded.uId,
+        getClientInfo(req),
+        decoded.role,
+        { session },
+      );
+
+      await session.commitTransaction();
+
+      res.cookie(config.jwt.cookie.accessTokenName, accessToken, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.accessMaxAge,
+        path: config.jwt.cookie.path,
+      });
+
+      res.cookie(config.jwt.cookie.refreshTokenName, refreshToken, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.refreshMaxAge,
+        path: config.jwt.cookie.path,
+      });
+
+      return "Token refreshed successfully";
+    } catch (error) {
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
+
+      logger.error(`Error occurred in rotateRefreshToken: ${error}`);
+      req.user = null;
+      res.clearCookie(config.jwt.cookie.accessTokenName, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.accessMaxAge,
+        path: config.jwt.cookie.path,
+      });
+      res.clearCookie(config.jwt.cookie.refreshTokenName, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.refreshMaxAge,
+        path: config.jwt.cookie.path,
+      });
+
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async logoutUser(req, res) {
+    try {
+      const sessionId = req.user.sId;
+      if (!sessionId) {
+        throw ApiError.unauthorized("Authentication Required", {
+          code: "AUTHENTICATION_REQUIRED",
+        });
+      }
+
+      await this.tokenService.findBySessionIdAndRevoke(sessionId);
+
+      req.user = null;
+      res.clearCookie(config.jwt.cookie.accessTokenName, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.accessMaxAge,
+        path: config.jwt.cookie.path,
+      });
+      res.clearCookie(config.jwt.cookie.refreshTokenName, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.refreshMaxAge,
+        path: config.jwt.cookie.path,
+      });
+
+      return "Logout successfull";
+    } catch (error) {
+      logger.error(`Error occurred in logout user service: ${error}`);
+      throw error;
+    }
+  }
+
+  async logoutUserAllSession(req, res) {
+    try {
+      const userId = req.user.uId;
+      if (!userId) {
+        throw ApiError.unauthorized("Authentication Required", {
+          code: "AUTHENTICATION_REQUIRED",
+        });
+      }
+
+      await this.tokenService.findByUserIdAndRevoke(userId);
+
+      req.user = null;
+      res.clearCookie(config.jwt.cookie.accessTokenName, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.accessMaxAge,
+        path: config.jwt.cookie.path,
+      });
+      res.clearCookie(config.jwt.cookie.refreshTokenName, {
+        httpOnly: config.jwt.cookie.httpOnly,
+        secure: config.jwt.cookie.secure,
+        sameSite: config.jwt.cookie.sameSite,
+        maxAge: config.jwt.cookie.refreshMaxAge,
+        path: config.jwt.cookie.path,
+      });
+
+      return "Logout successfull";
+    } catch (error) {
+      logger.error(
+        `Error occurred in logout user all session service: ${error}`,
+      );
+      throw error;
+    }
+  }
+
+  async updateUserPassword(req, res) {
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
+
+      const { uId } = req.user;
+
+      const { currentPassword, newPassword } = req.body;
+
+      if (!uId) {
+        throw ApiError.unauthorized("Authentication required", {
+          code: "AUTHENTICATION_REQUIRED",
+        });
+      }
+
+      const user = await this.userRepository.findByIdWithPassword(uId, {
+        session,
+      });
+
+      if (!user) {
+        throw ApiError.notFound("User not found", { code: "NOT_FOUND" });
+      }
+
+      const isPassCorrect = await verifyPassword(
+        currentPassword,
+        user.password,
+      );
+
+      if (!isPassCorrect) {
+        throw ApiError.unauthorized("Incorrect password", {
+          code: "INVALID_CREDENTIALS",
+        });
+      }
+
+      const hashedPassword = await hashPassword(newPassword);
+      await this.userRepository.updateUserPassword(uId, hashedPassword, {
+        session,
+      });
+
+      await session.commitTransaction();
+      return "Password Updated";
+    } catch (error) {
+      await session.abortTransaction();
+
+      logger.error(`Error occurred in updateUserPassword service: ${error}`);
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+}

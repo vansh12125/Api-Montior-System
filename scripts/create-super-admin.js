@@ -1,5 +1,5 @@
 import { User } from "../src/models/index.js";
-import { Roles, ROLE_PERMISSIONS } from "../src/enums/index.js";
+import { Roles } from "../src/enums/index.js";
 import { requiredEnv } from "../src/utils/index.js";
 import { logger } from "../src/configs/index.js";
 import { hashPassword } from "../src/services/index.js";
@@ -19,16 +19,14 @@ const createSuperAdmin = async () => {
   const username = requiredEnv("SUPER_ADMIN_USERNAME");
   const email = requiredEnv("SUPER_ADMIN_EMAIL");
   const password = requiredEnv("SUPER_ADMIN_PASSWORD");
-  const hased = await hashPassword(password);
   const admin = await User.create({
     name,
     username,
     email,
-    password: hased,
+    password: await hashPassword(password),
     role: Roles.SUPER_ADMIN,
     isVerified: true,
     isActive: true,
-    permissions: ROLE_PERMISSIONS.SUPER_ADMIN,
   });
 
   logger.info(`Super Admin Created-> ID: ${admin._id.toString()}`);

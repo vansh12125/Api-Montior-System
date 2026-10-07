@@ -1,5 +1,7 @@
 import { Schema, model } from "mongoose";
+
 import { Roles } from "../enums/index.js";
+import { VALIDATION } from "../constants/validation.js";
 
 const UserSchema = new Schema(
   {
@@ -7,93 +9,109 @@ const UserSchema = new Schema(
       type: String,
       required: true,
       trim: true,
-      minLength: [3, "Name Should be of minimun length, 3"],
-      maxLength: [50, "Name Should be of maximum length, 50"],
+      minLength: [
+        VALIDATION.NAME.MIN_LENGTH,
+        `Name should be of minimum length, ${VALIDATION.NAME.MIN_LENGTH}`,
+      ],
+      maxLength: [
+        VALIDATION.NAME.MAX_LENGTH,
+        `Name should be of maximum length, ${VALIDATION.NAME.MAX_LENGTH}`,
+      ],
     },
+
     username: {
       type: String,
       required: true,
       unique: true,
       trim: true,
-      minLength: [3, "Username Should be of minimun length, 3"],
-      maxLength: [25, "Username Should be of maximum length, 25"],
+      lowercase: true,
+      minLength: [
+        VALIDATION.USERNAME.MIN_LENGTH,
+        `Username should be of minimum length, ${VALIDATION.USERNAME.MIN_LENGTH}`,
+      ],
+      maxLength: [
+        VALIDATION.USERNAME.MAX_LENGTH,
+        `Username should be of maximum length, ${VALIDATION.USERNAME.MAX_LENGTH}`,
+      ],
       match: [
-        /^[a-zA-Z][a-zA-Z0-9_]{2,19}$/,
+        VALIDATION.USERNAME.PATTERN,
         "Username must start with a letter and contain only letters, numbers, or underscores",
       ],
-      lowercase: true,
     },
+
     email: {
       type: String,
       required: true,
       unique: true,
       lowercase: true,
       trim: true,
-      match: [
-        /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-        "Invalid Email",
+      maxLength: [
+        VALIDATION.EMAIL.MAX_LENGTH,
+        `Email should be of maximum length, ${VALIDATION.EMAIL.MAX_LENGTH}`,
       ],
+      match: [VALIDATION.EMAIL.PATTERN, "Invalid email"],
     },
+
     password: {
       type: String,
-      minLength: [8, "Passoword Should be of minimun length, 8"],
+      required: true,
+      minLength: [
+        VALIDATION.PASSWORD.MIN_LENGTH,
+        `Password should be of minimum length, ${VALIDATION.PASSWORD.MIN_LENGTH}`,
+      ],
+      maxLength: [
+        VALIDATION.PASSWORD.MAX_LENGTH,
+        `Password should be of maximum length, ${VALIDATION.PASSWORD.MAX_LENGTH}`,
+      ],
       select: false,
     },
+
     role: {
       type: String,
       required: true,
       enum: Object.values(Roles),
       default: Roles.CLIENT_VIEWER,
     },
+
     isVerified: {
       type: Boolean,
       required: true,
       default: false,
     },
+
     clientId: {
       type: Schema.Types.ObjectId,
       ref: "Client",
-      required: function () {
-        return this.role !== Roles.SUPER_ADMIN;
-      },
+      default:null,
+      // required: function () {
+      //   return this.role !== Roles.SUPER_ADMIN;
+      // },
     },
-    permissions: {
-      canCreateApiKeys: {
-        type: Boolean,
-        default: false,
-      },
-      canManageUsers: {
-        type: Boolean,
-        default: false,
-      },
-      canViewAnalytics: {
-        type: Boolean,
-        default: true,
-      },
-      canExportData: {
-        type: Boolean,
-        default: false,
-      },
-    },
+
     isActive: {
       type: Boolean,
+      required: true,
       default: true,
     },
   },
   {
     timestamps: true,
     collection: "users",
+
     toJSON: {
       transform: function (doc, ret) {
         const { password, __v, ...user } = ret;
-
         return user;
       },
     },
   },
 );
 
-UserSchema.index({ clientId: 1, isActive: 1 });
+UserSchema.index({
+  clientId: 1,
+  isActive: 1,
+});
+
 UserSchema.index(
   { role: 1 },
   {
