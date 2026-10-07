@@ -23,7 +23,14 @@ export default class EmailService {
     );
   }
 
-  async sendEmail(toEmail, serviceName, clientName, username, tempPassword) {
+  async sendEmail(
+    toEmail,
+    serviceName,
+    clientName,
+    username,
+    tempPassword,
+    role = "viewer",
+  ) {
     try {
       let html = await fs.readFile(this.templatePath, "utf-8");
       const template = Handlebars.compile(html);
@@ -33,6 +40,7 @@ export default class EmailService {
         username,
         tempPassword,
         loginUrl: "http://localhost:5000/signin",
+        role,
       });
 
       await this.transporter.sendMail({

@@ -93,6 +93,18 @@ export default class MongoUserRepository extends BaseUserRepository {
     }
   }
 
+  async findAllClientAdmin(clientId, options = {}) {
+    try {
+      return await this.model
+        .find({ clientId, role: Roles.CLIENT_ADMIN })
+        .session(options.session || null)
+        .select("-password");
+    } catch (error) {
+      logger.error(`Error occurred while finding user by clientId: ${error}`);
+      throw error;
+    }
+  }
+
   async findAll() {
     try {
       return await this.model.find().select("-password");

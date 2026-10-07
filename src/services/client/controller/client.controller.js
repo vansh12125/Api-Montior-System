@@ -40,4 +40,36 @@ export default class ClientController {
       next(error);
     }
   }
+
+  async registerClientAdmin(req, res, next) {
+    try {
+      const result = await this.clientService.createAdmin(req, res);
+
+      return res
+        .status(201)
+        .json(
+          ResponseFormatter.success(
+            201,
+            "Client Admin created successfully",
+            result,
+          ),
+        );
+    } catch (error) {
+      logger.error("Error occurred in registerClientAdmin: ", error);
+      next(error);
+    }
+  }
+
+  async getAllClientAdmin(req, res, next) {
+    try {
+      const result = await this.clientService.getAllClientAdmin(req, res);
+
+      return res
+        .status(200)
+        .json(ResponseFormatter.success(200, "fetched client admins", result));
+    } catch (error) {
+      logger.error("Error occurred in getAllClientAdmin: ", error);
+      next(error);
+    }
+  }
 }

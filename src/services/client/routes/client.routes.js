@@ -28,4 +28,23 @@ clientRouter.get(
   },
 );
 
+clientRouter.post(
+  "/",
+  jwtMiddleware,
+  clientAdminMiddleware,
+  validate(registerClientViewer),
+  (req, res, next) => {
+    clientController.registerClientAdmin(req, res, next);
+  },
+);
+
+clientRouter.get(
+  "/",
+  jwtMiddleware,
+  clientAdminMiddleware,
+  (req, res, next) => {
+    clientController.getAllClientAdmin(req, res, next);
+  },
+);
+
 export { clientRouter };

@@ -120,6 +120,69 @@ export default class ClientService {
         name,
         username,
         tempPass,
+        "Viewer",
+      );
+
+      return user;
+    } catch (error) {
+      await session.abortTransaction();
+
+      logger.error(`Error occurred in createViewer: ${error}`);
+
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async createAdmin(req, res) {
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
+
+      const { name, email } = req.body;
+      const clientId = req.user.clientId;
+
+      if (await this.userRepository.findByEmail(email, { session })) {
+        throw ApiError.conflict("Email already exist", {
+          code: "EMAIL_ALREADY_EXIST",
+        });
+      }
+
+      const client = await this.clientRepository.findById(clientId, {
+        session,
+      });
+
+      if (!client) {
+        throw ApiError.notFound("Client not found", {
+          code: "CLIENT_NOT_FOUND",
+        });
+      }
+
+      const username = await this.generateUniqueUsername(name);
+      const tempPass = generateRandomSecurePassword();
+
+      const user = await this.userRepository.create(
+        {
+          name,
+          username,
+          email,
+          password: await hashPassword(tempPass),
+          role: Roles.CLIENT_ADMIN,
+          clientId: clientId,
+        },
+        { session },
+      );
+
+      await session.commitTransaction();
+
+      await this.emailService.sendEmail(
+        email,
+        client.name,
+        name,
+        username,
+        tempPass,
+        "Admin",
       );
 
       return user;
@@ -140,6 +203,17 @@ export default class ClientService {
       return await this.userRepository.findAllClientViewer(clientId);
     } catch (error) {
       logger.error(`Error occurred in getAllClientViewer  : ${error}`);
+
+      throw error;
+    }
+  }
+
+  async getAllClientAdmin(req, res) {
+    try {
+      const clientId = req.user.clientId;
+      return await this.userRepository.findAllClientAdmin(clientId);
+    } catch (error) {
+      logger.error(`Error occurred in getAllClientAdmin  : ${error}`);
 
       throw error;
     }
