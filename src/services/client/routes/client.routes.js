@@ -1,49 +1,59 @@
 import { Router } from "express";
 import dependencies from "../dependencies/clientDependency.js";
 import { validate } from "../../../middlewares/validation.middleware.js";
-import { registerClientViewer } from "../validations/client.validation.js";
+import {
+  registerClient,
+  createApiKey,
+} from "../validations/client.validation.js";
 
 const clientRouter = Router();
 const { controller, middleware } = dependencies;
 const clientController = controller.clientController;
 const jwtMiddleware = middleware.jwtMiddleware;
-const clientAdminMiddleware=middleware.clientAdminMiddleware;
+const clientAdminMiddleware = middleware.clientAdminMiddleware;
+
+clientRouter.use(jwtMiddleware);
 
 clientRouter.post(
   "/users",
-  jwtMiddleware,
   clientAdminMiddleware,
-  validate(registerClientViewer),
+  validate(registerClient),
   (req, res, next) => {
     clientController.registerClientViewer(req, res, next);
   },
 );
 
-clientRouter.get(
-  "/users",
-  jwtMiddleware,
-  clientAdminMiddleware,
-  (req, res, next) => {
-    clientController.getAllClientViewer(req, res, next);
-  },
-);
+clientRouter.get("/users", clientAdminMiddleware, (req, res, next) => {
+  clientController.getAllClientViewer(req, res, next);
+});
 
 clientRouter.post(
   "/",
-  jwtMiddleware,
   clientAdminMiddleware,
-  validate(registerClientViewer),
+  validate(registerClient),
   (req, res, next) => {
     clientController.registerClientAdmin(req, res, next);
   },
 );
 
+clientRouter.get("/", clientAdminMiddleware, (req, res, next) => {
+  clientController.getAllClientAdmin(req, res, next);
+});
+
+clientRouter.post(
+  "/api-keys",
+  clientAdminMiddleware,
+  validate(createApiKey),
+  (req, res, next) => {
+    clientController.createApiKey(req, res, next);
+  },
+);
+
 clientRouter.get(
-  "/",
-  jwtMiddleware,
+  "/api-keys",
   clientAdminMiddleware,
   (req, res, next) => {
-    clientController.getAllClientAdmin(req, res, next);
+    clientController.getAllApiKey(req, res, next);
   },
 );
 

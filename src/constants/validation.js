@@ -33,6 +33,7 @@ const VALIDATION = Object.freeze({
 
   DESCRIPTION: {
     MAX_LENGTH: 500,
+    MIN_LENGTH: 5,
   },
 
   WEBSITE: {

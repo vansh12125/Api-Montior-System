@@ -1,21 +1,16 @@
 import { Schema, model } from "mongoose";
 
 import { API_ENIVORNMENT } from "../enums/index.js";
+import { VALIDATION } from "../constants/validation.js";
 
 const ApiKeySchema = new Schema(
   {
-    keyId: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
-
     keyValue: {
       type: String,
       required: true,
       unique: true,
       index: true,
+      select:false
     },
 
     clientId: {
@@ -29,15 +24,31 @@ const ApiKeySchema = new Schema(
       type: String,
       required: true,
       trim: true,
-      maxlength: 100,
+      minLength: [
+        VALIDATION.NAME.MIN_LENGTH,
+        `ApiKey name should be of minimum length, ${VALIDATION.NAME.MIN_LENGTH}`,
+      ],
+      maxLength: [
+        VALIDATION.NAME.MAX_LENGTH,
+        `ApiKey name should be of maximum length, ${VALIDATION.NAME.MAX_LENGTH}`,
+      ],
     },
 
     description: {
       type: String,
-      maxlength: 500,
-      default: "",
+      trim: true,
+
+      minLength: [
+        VALIDATION.DESCRIPTION.MIN_LENGTH,
+        `Description name should be of minimum length, ${VALIDATION.DESCRIPTION.MIN_LENGTH}`,
+      ],
+      maxlength: [
+        VALIDATION.DESCRIPTION.MAX_LENGTH,
+        `Description should be of maximum length, ${VALIDATION.DESCRIPTION.MAX_LENGTH}`,
+      ],
+      required: true,
     },
-    environment: {
+    enivornment: {
       type: String,
       enum: Object.values(API_ENIVORNMENT),
       default: API_ENIVORNMENT.DEVELOPMENT,
@@ -110,24 +121,6 @@ const ApiKeySchema = new Schema(
       },
     },
 
-    metadata: {
-      createdBy: {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-      },
-
-      purpose: {
-        type: String,
-        trim: true,
-        maxlength: 200,
-      },
-
-      tags: {
-        type: [String],
-        default: [],
-      },
-    },
-
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
@@ -146,12 +139,11 @@ ApiKeySchema.index({
 });
 
 ApiKeySchema.index({
-  keyValue: 1,
   isActive: 1,
 });
 
 ApiKeySchema.index({
-  environment: 1,
+  enivornment: 1,
   clientId: 1,
 });
 
