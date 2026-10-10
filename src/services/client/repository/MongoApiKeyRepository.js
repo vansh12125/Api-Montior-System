@@ -30,13 +30,14 @@ export default class MongoApiKeyRepository extends BaseApiKeyRepository {
     }
   }
 
-  async findByKeyValue(apikeyValue, options = {}) {
+  async findByKeyId(apikeyId, options = {}) {
     try {
       return await this.model
-        .findOne({ keyValue: apikeyValue })
+        .findOne({ keyId: apikeyId })
+        .select("+keyHash")
         .session(options.session || null);
     } catch (error) {
-      logger.error(`Error occured in findByKeyValue:${error}`);
+      logger.error(`Error occured in findByKeyId:${error}`);
       throw error;
     }
   }

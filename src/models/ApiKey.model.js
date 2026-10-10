@@ -5,12 +5,17 @@ import { VALIDATION } from "../constants/validation.js";
 
 const ApiKeySchema = new Schema(
   {
-    keyValue: {
+    keyId: {
       type: String,
       required: true,
       unique: true,
       index: true,
-      select:false
+    },
+    keyHash: {
+      type: String,
+      required: true,
+      unique: true,
+      select: false,
     },
 
     clientId: {

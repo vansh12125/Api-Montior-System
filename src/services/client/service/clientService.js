@@ -5,6 +5,7 @@ import {
   generateRandomSecurePassword,
   hashPassword,
   generateApiKey,
+  verifyPassword,
 } from "../../shared/service/bcryptService.js";
 import mongoose from "mongoose";
 
@@ -244,25 +245,27 @@ export default class ClientService {
         });
       }
 
-      const keyValue = generateApiKey(enivornment);
-      const hashKey = await hashPassword(keyValue);
+      const { keyId, rawKey, keyHash } = await generateApiKey(enivornment);
 
-      const apiKey = await this.apiKeyRepository.create(
+      await this.apiKeyRepository.create(
         {
           name,
           description,
           enivornment,
           clientId,
           createdBy: userId,
-          keyValue: hashKey,
+          keyHash,
+          keyId,
         },
         { session },
       );
 
       await session.commitTransaction();
       return {
-        ...apiKey,
-        keyValue,
+        name,
+        description,
+        enivornment,
+        rawKey,
       };
     } catch (error) {
       await session.abortTransaction();
@@ -288,6 +291,52 @@ export default class ClientService {
       return await this.apiKeyRepository.findByClient(clientId);
     } catch (error) {
       logger.error(`Error occurred in getAllApiKey: ${error}`);
+      throw error;
+    }
+  }
+
+  async getClientByApiKey(keyId, rawKey, prefix) {
+    try {
+      const apiKey = await this.apiKeyRepository.findByKeyId(keyId);
+
+      if (!apiKey) {
+        throw ApiError.badRequest("Invalid api key", {
+          code: "INVALID_KEY",
+        });
+      }
+
+      const isValid = await verifyPassword(rawKey, apiKey.keyHash);
+      if (!isValid) {
+        throw ApiError.badRequest("Invalid api key", {
+          code: "INVALID_KEY",
+        });
+      }
+
+      const expectedPrefix = {
+        PRODUCTION: "live",
+        STAGING: "stage",
+        DEVELOPMENT: "dev",
+        TESTING: "test",
+      }[apiKey.enivornment];
+
+      if (
+        !apiKey.isActive ||
+        prefix !== expectedPrefix ||
+        (apiKey.expiresAt && apiKey.expiresAt <= new Date())
+      ) {
+        throw ApiError.badRequest("API key is inactive or invalid", {
+          code: "INVALID_KEY",
+        });
+      }
+
+      return {
+        id: apiKey._id.toString(),
+        clientId: apiKey.clientId,
+        enivornment: apiKey.enivornment,
+        permissions: apiKey.permissions,
+      };
+    } catch (error) {
+      logger.error(`Error occurred in getClientByApiKey: ${error}`);
       throw error;
     }
   }
