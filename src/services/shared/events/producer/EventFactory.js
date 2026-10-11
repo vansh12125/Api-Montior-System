@@ -8,7 +8,7 @@ import RetryStrategy from "./RetryStrategy.js";
 export function createEventFactory(override = {}) {
   const log = override.logger ?? logger;
   const rmq = override.rabbitmq ?? rabbitmq;
-  const queueName = override.queueName ?? configs.rabbitmq.queue;
+  const queueName = override.queueName ?? `${configs.rabbitmq.queue}.nq`;
 
   if (!rmq) {
     throw new Error("RabbitMQ connection manager is required");
@@ -27,7 +27,7 @@ export function createEventFactory(override = {}) {
   const circuitBreaker =
     override.circuitBreaker ??
     new CircuitBreaker({
-      failureThreshold: 5,
+      failureThreshold: 3,
       cooldownMs: 30_000,
 
       halfOpenMaxAttempts: 3,

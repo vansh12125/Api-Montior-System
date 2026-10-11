@@ -1,7 +1,7 @@
 import { UAParser } from "ua-parser-js";
 
 const getClientInfo = (req) => {
-  const parser = new UAParser(req.get("user-agent"));
+  const parser = new UAParser(req.get("User-Agent"));
   const browser = parser.getBrowser();
   const os = parser.getOS();
   const device = parser.getDevice();

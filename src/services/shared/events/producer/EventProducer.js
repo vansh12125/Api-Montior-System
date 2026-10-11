@@ -5,7 +5,7 @@ export default class EventPrdoucer {
   constructor({
     channelManager,
     circuitBreaker,
-    retryStartegy,
+    retryStrategy,
     logger,
     queueName,
   }) {
@@ -15,7 +15,7 @@ export default class EventPrdoucer {
     if (!circuitBreaker) {
       throw new Error("Circuit Breaker is required");
     }
-    if (!retryStartegy) {
+    if (!retryStrategy) {
       throw new Error("Retry Startegy is required");
     }
     if (!queueName) {
@@ -23,7 +23,7 @@ export default class EventPrdoucer {
     }
 
     this._channelManager = channelManager;
-    this._retryStartegy = retryStartegy;
+    this._retryStrategy = retryStrategy;
     this._circuitBreaker = circuitBreaker;
     this._queueName = queueName;
     this._logger = logger ?? console;
@@ -44,6 +44,10 @@ export default class EventPrdoucer {
   async _publish(eventData, { correlationId, attempt }) {
     const channel = await this._channelManager.getChannel();
 
+    if (!channel || typeof channel.publish !== "function") {
+      throw new Error("RabbitMQ confirm channel unavailable");
+    }
+
     const message = {
       type: EVENT_TYPES.API_HIT,
       data: eventData,
@@ -53,8 +57,9 @@ export default class EventPrdoucer {
 
     const buffer = Buffer.from(JSON.stringify(message));
 
-    const publisheOptions = {
+    const publishOptions = {
       persistent: true,
+      mandatory: true,
       contentType: "application/json",
       messageId: eventData.eventId,
       correlationId,
@@ -62,36 +67,68 @@ export default class EventPrdoucer {
     };
 
     return new Promise((resolve, reject) => {
-      const written = channel.publish(
-        "",
-        this._queueName,
-        buffer,
-        publisheOptions,
-        (err) => {
-          if (err) {
-            return reject(new Error(`[EventPrdoucer] Publish nacked: ${err}`));
-          }
-          resolve();
-        },
-      );
+      let settled = false;
+      let returned = false;
 
-      if (!written) {
-        this._logger.info(
-          `[EventPrdoucer] back-pressure detected waiting for drain`,
-          {
-            eventId: eventData.eventId,
-          },
-        );
-      }
-
-      const onDrain = () => {
-        channel.removeListener("drain", onDrain);
-        this._logger.debug("[EventPrdoucer] drain event recieved ", {
-          eventId: eventData.eventId,
-        });
+      const cleanup = () => {
+        clearTimeout(timer);
+        channel.off("return", onReturn);
       };
 
-      channel.once("drain", onDrain);
+      const finish = (error) => {
+        if (settled) return;
+
+        settled = true;
+        cleanup();
+
+        if (error) {
+          reject(error);
+        } else {
+          resolve(true);
+        }
+      };
+
+      const onReturn = (msg) => {
+        if (msg.properties.messageId !== eventData.eventId) return;
+
+        returned = true;
+
+        const error = new Error(
+          `RabbitMQ unroutable message: ${msg.fields.replyText}`,
+        );
+
+        error.code = "UNROUTABLE_MESSAGE";
+        finish(error);
+      };
+
+      const timer = setTimeout(() => {
+        const error = new Error("RabbitMQ confirmation timed out");
+        error.code = "ETIMEDOUT";
+        finish(error);
+      }, 5000);
+
+      channel.on("return", onReturn);
+
+      try {
+        channel.publish(
+          "",
+          this._queueName,
+          buffer,
+          publishOptions,
+          (error) => {
+            if (error) {
+              finish(error);
+              return;
+            }
+
+            if (!returned) {
+              finish(null);
+            }
+          },
+        );
+      } catch (error) {
+        finish(error);
+      }
     });
   }
 
@@ -139,7 +176,19 @@ export default class EventPrdoucer {
 
     while (true) {
       try {
-        await this._publish(eventData, { correlationId, attempt });
+        const published = await this._publish(eventData, {
+          correlationId,
+          attempt,
+        });
+
+        if (!published) {
+          this._logger.error(`[EventProducer] publishe failed`, {
+            eventId: eventData.eventId,
+            correlationId,
+            endpoint: eventData.endpoint,
+          });
+          throw new Error("API hit was not published");
+        }
 
         const latencyMs = Date.now() - startMs;
         this._circuitBreaker.onSuccess();
@@ -162,19 +211,19 @@ export default class EventPrdoucer {
         });
 
         const canRetry =
-          isRetryable(error) && this._retryStartegy.shouldRetry(attempt);
+          isRetryable(error) && this._retryStrategy.shouldRetry(attempt);
 
         if (!canRetry) {
           this._circuitBreaker.onFailure();
           this._incrementMetrics("failed");
 
-          if (!this._retryStartegy.shouldRetry(attempt)) {
+          if (!this._retryStrategy.shouldRetry(attempt)) {
             this._incrementMetrics("retriesExhausted");
           }
           throw error;
         }
 
-        await this._retryStartegy.wait(attempt);
+        await this._retryStrategy.wait(attempt);
         attempt++;
       }
     }

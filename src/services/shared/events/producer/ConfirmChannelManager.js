@@ -2,6 +2,7 @@ import { EventEmitter } from "events";
 
 export default class ConfirmChannelManager extends EventEmitter {
   constructor({ rabbitMq, logger }) {
+    super();
     if (!rabbitMq) {
       throw new Error(
         "[ConfirmChannelManager] require rabbitMq connection manager",
@@ -33,66 +34,102 @@ export default class ConfirmChannelManager extends EventEmitter {
     this._connecting = true;
 
     try {
-      let connection;
+      const connection = await this._withTimeout(
+        (async () => {
+          if (!this._rabbitMq.connection) {
+            await this._rabbitMq.connectRabbitMq();
+          }
 
-      if (this._rabbitMq.connection) {
-        connection = this._rabbitMq.connection;
-      } else {
-        await this._rabbitMq.connect();
+          if (!this._rabbitMq.connection) {
+            throw new Error("RabbitMQ connection unavailable");
+          }
 
-        if (!this._rabbitMq.connection) {
-          throw new Error(
-            "[ConfirmChannelManager] Failed to obtain rabbitMq connection",
-          );
-        }
+          return this._rabbitMq.connection;
+        })(),
+        5000,
+        "RabbitMQ connection timed out",
+      );
 
-        connection = this._rabbitMq.connection;
-      }
-
-      const confirmChannel = await connection.createConfirmChannel();
+      const confirmChannel = await this._withTimeout(
+        connection.createConfirmChannel(),
+        5000,
+        "RabbitMQ confirm channel creation timed out",
+      );
 
       confirmChannel.on("drain", () => {
         this.emit("drain");
       });
 
+      confirmChannel.on("return", (message) => {
+        this._logger.error("[RabbitMQ] Unroutable message", {
+          exchange: message.fields.exchange,
+          routingKey: message.fields.routingKey,
+          messageId: message.properties.messageId,
+        });
+      });
+
       confirmChannel.on("close", () => {
-        this._logger.warn(
-          "[ConfirmChannelManager] confirm channel closed unexpectedly",
-        );
-        this._channel = null;
+        this._logger.warn("[ConfirmChannelManager] Confirm channel closed");
+        if (this._channel === confirmChannel) {
+          this._channel = null;
+        }
       });
 
       confirmChannel.on("error", (err) => {
-        this._logger.warn(
-          "[ConfirmChannelManager] confirm channel throws error",
-          {
-            error: err.message,
-            stack: err.stack,
-            code: err.code,
-          },
-        );
-        this._channel = null;
-        this.emit("error", err);
+        this._logger.error("[ConfirmChannelManager] Channel error", {
+          message: err.message,
+          code: err.code,
+        });
+
+        if (this._channel === confirmChannel) {
+          this._channel = null;
+        }
       });
 
       this._channel = confirmChannel;
-      this._logger.info("[ConfirmChannelManager] confirm channel ready");
 
-      for (const i of this._connectWaiters) {
-        i.resolve(confirmChannel);
+      this._logger.info("[ConfirmChannelManager] Confirm channel ready");
+
+      for (const waiter of this._connectWaiters) {
+        waiter.resolve(confirmChannel);
       }
 
       this._connectWaiters = [];
 
       return confirmChannel;
     } catch (error) {
-      for (const i of this._connectWaiters) {
-        i.reject(error);
+      for (const waiter of this._connectWaiters) {
+        waiter.reject(error);
       }
+
       this._connectWaiters = [];
-      return error;
+      throw error;
     } finally {
       this._connecting = false;
+    }
+  }
+
+  _withTimeout(promise, timeoutMs, message) {
+    let timer;
+
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          const error = new Error(message);
+          error.code = "ETIMEDOUT";
+          reject(error);
+        }, timeoutMs);
+      }),
+    ]).finally(() => clearTimeout(timer));
+  }
+
+  async close() {
+    const channel = this._channel;
+    this._channel = null;
+
+    if (channel) {
+      await channel.close();
     }
   }
 }

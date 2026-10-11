@@ -42,6 +42,12 @@ const validateApiKeyMiddleware = async (req, res, next) => {
         prefix,
       );
 
+    if (!permissions.canIngest) {
+      throw ApiError.forbidden("Api Key does not have ingest permission", {
+        code: "INSUFFICIENT_PERMISSION",
+      });
+    }
+
     req.apiKey = {
       id,
       clientId,

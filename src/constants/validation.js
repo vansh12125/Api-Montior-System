@@ -44,8 +44,11 @@ const VALIDATION = Object.freeze({
     MIN_DAYS: 7,
     MAX_DAYS: 365,
   },
+
+  SERVICE_NAME: {
+    MIN_LENGTH: 3,
+    MAX_LENGTH: 50,
+  },
 });
 
-export {
-  VALIDATION,
-};
+export { VALIDATION };

@@ -59,7 +59,7 @@ export default class CircuitBreaker {
   }
 
   allowRequest() {
-    const current = this._state;
+    const current = this.state;
 
     if (current === CircuitState.CLOSED) {
       return true;
@@ -78,7 +78,7 @@ export default class CircuitBreaker {
   onSuccess() {
     if (this._state === CircuitState.HALF_OPEN) {
       this._halfOpenSuccesses++;
-      if (this._halfOpenSuccesses > this.halfOpenMaxAttempts) {
+      if (this._halfOpenSuccesses >= this.halfOpenMaxAttempts) {
         this._reset();
         this.logger.info(
           `[CircuitBreaker] reset to CLOSED after successful half-open probes`,

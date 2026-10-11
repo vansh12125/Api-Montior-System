@@ -1,13 +1,16 @@
 const RETRYABLE_PATTERNS = [
   "channel closed",
   "connection closed",
-  "ECONNRESET",
-  "ECONNREFUSED",
-  "ETIMEDOUT",
+  "econnreset",
+  "econnrefused",
+  "etimedout",
   "buffer full",
   "heartbeat timeout",
   "not available",
   "server connection closed",
+  "confirmation timed out",
+  "connection timed out",
+  "channel creation timed out",
 ];
 
 const isRetryable = (err) => {
