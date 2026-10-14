@@ -48,7 +48,7 @@ class RabbitMqConnection {
     try {
       logger.info("Connecting to RabbitMQ");
 
-      const connection = await amqp.connect(config.rabbitmq.url);
+      const connection = await amqp.connect(config.rabbitmq.url,{timeout:5000});
       const channel = await connection.createChannel();
 
       const queue = config.rabbitmq.queue;

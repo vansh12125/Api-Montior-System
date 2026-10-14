@@ -45,7 +45,7 @@ const ApiHitSchema = new Schema(
       required: true,
       index: true,
     },
-    apikeyId: {
+    apiKeyId: {
       type: Schema.Types.ObjectId,
       ref: "ApiKey",
       required: true,

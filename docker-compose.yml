@@ -13,7 +13,7 @@ services:
       - "5432:5432"
 
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - postgres_data:/var/lib/postgresql/data
       - type: bind
         source: ./scripts/init_postgresql.sql
         target: /docker-entrypoint-initdb.d/init-postgres.sql
@@ -119,6 +119,25 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
+
+  consumer:
+    build: 
+      context: .
+      dockerfile: Dockerfile.consumer
+    container_name: api-monitoring-consumer
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - api-monitoring-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
     driver: local

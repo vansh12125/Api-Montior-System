@@ -103,26 +103,29 @@ class PostgresConnection {
    * @returns {Promise<QueryResult<T>>} The PostgreSQL query result.
    * @throws {Error} If the query fails.
    */
-  async query(text, params = []) {
-    const pool = this.getRequiredPool();
+
+  async query(query, params = []) {
+    const pool = this._getRequiredPool();
     const start = Date.now();
+    const queryText = typeof query === "string" ? query : query.text;
 
     try {
-      const result = (await pool.query) < T > (text, params);
-
-      const duration = Date.now() - start;
+      const result =
+        typeof query === "string"
+          ? await pool.query(query, params)
+          : await pool.query(query);
 
       logger.debug("Executed PostgreSQL query", {
-        text,
-        duration,
+        duration: Date.now() - start,
         rows: result.rowCount,
       });
 
       return result;
     } catch (error) {
       logger.error("PostgreSQL query error", {
-        text,
+        text: queryText,
         error: error instanceof Error ? error.message : error,
+        duration: Date.now() - start,
       });
 
       throw error;

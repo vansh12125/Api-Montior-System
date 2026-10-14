@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import config from "../../../constants/index.js";
 import crypto from "crypto";
-import {API_ENIVORNMENT} from "../../../enums/index.js"
+import { API_ENIVORNMENT } from "../../../enums/index.js";
 
 /**
  * Take password and return hased password
@@ -30,18 +30,26 @@ const generateRandomSecurePassword = () => {
   return crypto.randomBytes(12).toString("hex");
 };
 
-/**
- * Generate a random 32-byte key and return it.
- * @param {API_ENIVORNMENT}  enivornment
- * @returns {string}
- */
-const generateApiKey = (enivornment) => {
-  if (!Object.values(API_ENIVORNMENT).includes(enivornment)) {
-    throw new Error("Invalid API enivornment");
+
+const generateApiKey = async (enivornment) => {
+  const prefix = {
+    PRODUCTION: "live",
+    STAGING: "stage",
+    DEVELOPMENT: "dev",
+    TESTING: "test",
+  }[enivornment];
+
+  if (!prefix) {
+    throw new Error("Invalid environment");
   }
 
-  const prefix = `ak_${enivornment.toLowerCase()}`;
-  return `${prefix}_${crypto.randomBytes(32).toString("hex")}`;
+  const keyId = crypto.randomBytes(12).toString("hex");
+  const secret = crypto.randomBytes(32).toString("hex");
+
+  const rawKey = `ak_${prefix}_${keyId}_${secret}`;
+  const keyHash = await hashPassword(secret);
+
+  return { rawKey, keyId, keyHash };
 };
 
 export {
