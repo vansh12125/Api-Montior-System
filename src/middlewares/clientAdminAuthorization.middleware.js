@@ -7,7 +7,7 @@ const clientAdminAuthorization = (userRepository) => {
     throw new Error("User repository is required");
   }
 
-  return async (req, res, next) => {
+  return async (req, _res, next) => {
     try {
       const userId = req.user.uId;
 
@@ -22,8 +22,6 @@ const clientAdminAuthorization = (userRepository) => {
           code: "INSUFFICIENT_PERMISSION",
         });
       }
-
-      req.user.clientId = existingUser.clientId;
 
       next();
     } catch (error) {
