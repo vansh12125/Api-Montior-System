@@ -1,4 +1,6 @@
 import { logger } from "../../../configs/index.js";
+import { pipeline } from "node:stream/promises";
+import { to as copyTo } from "pg-copy-streams";
 
 const MAX_LIMIT = 1_000;
 const QUERY_TIMEOUT_MS = 30_000;
@@ -271,6 +273,78 @@ export class MetricsRepository {
         error,
       );
       throw error;
+    }
+  }
+
+  async exportMetricsCsv(
+    clientId,
+    startTime = null,
+    endTime = null,
+    destinationStream,
+  ) {
+    let client;
+    try {
+      let query = `
+        SELECT
+          service_name,
+          endpoint,
+          method,
+          SUM(total_hits) as total_hits,
+          ROUND((SUM(avg_latency * total_hits) / NULLIF(SUM(total_hits), 0))::numeric, 2) as avg_latency,
+          SUM(error_hits) as error_hits
+        FROM endpoint_metrics
+      `;
+
+      let whereConditions = [];
+
+      if (clientId != null) {
+        whereConditions.push(`client_id = '${clientId}'`);
+      }
+
+      if (startTime) {
+        const startIso =
+          startTime instanceof Date
+            ? startTime.toISOString()
+            : new Date(startTime).toISOString();
+        whereConditions.push(`time_bucket >= '${startIso}'`);
+      }
+
+      if (endTime) {
+        const endIso =
+          endTime instanceof Date
+            ? endTime.toISOString()
+            : new Date(endTime).toISOString();
+        whereConditions.push(`time_bucket <= '${endIso}'`);
+      }
+
+      if (whereConditions.length > 0) {
+        query += ` WHERE ${whereConditions.join(" AND ")}`;
+      }
+
+      query += `
+        GROUP BY service_name, endpoint, method
+        ORDER BY total_hits DESC
+      `;
+
+      const copyQuery = `COPY (${query}) TO STDOUT WITH (FORMAT CSV, HEADER true, DELIMITER ',')`;
+
+      const pool = this._postgres.getPool
+        ? this._postgres.getPool()
+        : this._postgres._getRequiredPool();
+      client = await pool.connect();
+      const dbStream = client.query(copyTo(copyQuery));
+
+      await pipeline(dbStream, destinationStream);
+    } catch (error) {
+      logger.error(
+        "Error occurred in exportMetricsCsv, MetricsRepository:",
+        error,
+      );
+      throw error;
+    } finally {
+      if (client) {
+        client.release();
+      }
     }
   }
 

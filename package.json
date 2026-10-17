@@ -24,6 +24,7 @@
     "mongoose": "^9.10.1",
     "nodemailer": "^10.0.14",
     "pg": "^8.23.0",
+    "pg-copy-streams": "^7.0.0",
     "ua-parser-js": "^2.0.10",
     "uuid": "^14.0.2",
     "winston": "^3.19.0",
