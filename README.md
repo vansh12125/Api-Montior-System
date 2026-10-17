@@ -955,13 +955,6 @@ For changes to the project:
 4. Commit your changes with a descriptive message.
 5. Open a pull request describing the changes.
 
----
-
-## License
-
-Add the license that applies to this repository before distributing or publishing the project.
-
-If no license has been selected, the repository should not claim to be open source under a particular license.
 
 ---
 
