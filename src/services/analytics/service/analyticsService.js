@@ -102,6 +102,39 @@ export class AnalyticsService {
     }
   }
 
+  async exportCsvData(req, res, filters = {}) {
+    try {
+      const clientId = req.user.clientId;
+      const { startTime, endTime } = this.parseTimeFilter(filters);
+
+      const startTag = this.formatFileDate(startTime);
+      const endTag = this.formatFileDate(endTime);
+
+      const filename = `metrics_${clientId}_from_${startTag}_to_${endTag}.csv`;
+
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`,
+      );
+
+      await this.metricsRepository.exportMetricsCsv(
+        clientId,
+        startTime,
+        endTime,
+        res,
+      );
+    } catch (error) {
+      logger.error("Error occurred in exportCsvData:", error);
+
+      if (res.headersSent) {
+        res.end();
+        return;
+      }
+      throw error;
+    }
+  }
+
   parseTimeFilter(filters = {}) {
     let { startTime, endTime } = filters;
 
@@ -118,6 +151,17 @@ export class AnalyticsService {
       endTime = new Date(endTime);
     }
 
-    return { startTime, endTime };
+    return {
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+    };
+  }
+
+  formatFileDate(dateStr) {
+    return new Date(dateStr)
+      .toISOString()
+      .replace(/T/, "_")
+      .replace(/:/g, "-")
+      .slice(0, 16);
   }
 }

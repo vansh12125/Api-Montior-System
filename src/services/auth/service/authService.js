@@ -156,6 +156,7 @@ export default class AuthService {
         existingUser._id.toString(),
         sessionId,
         existingUser.role,
+        existingUser.clientId
       );
 
       await this.tokenService.saveTokenInDb(
@@ -262,6 +263,7 @@ export default class AuthService {
         decoded.uId,
         decoded.sId,
         decoded.role,
+        decoded.cId,
       );
 
       await this.tokenService.saveTokenInDb(

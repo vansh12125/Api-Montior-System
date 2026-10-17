@@ -49,6 +49,17 @@ export class AnalyticsController {
     }
   }
 
+  async exportCsvData(req, res, next) {
+    try {
+      const { startTime, endTime } = req.query;
+      const timeRange = this.validateTimeRange(startTime, endTime);
+      await this.analyticsService.exportCsvData(req, res, timeRange);
+    } catch (error) {
+      logger.error("Error occurred in exportCsvData controller: ", error);
+      next(error);
+    }
+  }
+
   validateTimeRange(startTime, endTime) {
     const parseValue = (v) => {
       if (v === undefined || v === null || v === "") return null;

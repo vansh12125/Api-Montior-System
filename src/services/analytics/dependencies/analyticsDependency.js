@@ -23,6 +23,8 @@ class AnalyticsDependency {
 
     const middleware = {
       jwtMiddleware: securityDependencies.middleware.jwtAuthMiddleware,
+      clientAdminMiddleware:
+        securityDependencies.middleware.clientAdminMiddleware,
     };
 
     return { repositories, controller, service, middleware };

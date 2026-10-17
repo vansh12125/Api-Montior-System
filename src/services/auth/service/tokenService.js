@@ -25,9 +25,9 @@ export default class TokenService {
     );
   }
 
-  generateRefreshToken(userId, sessionId, role) {
+  generateRefreshToken(userId, sessionId, role, clientId) {
     return jwt.sign(
-      { uId: userId, sId: sessionId, role: role, type: "ref" },
+      { uId: userId, sId: sessionId, role: role, type: "ref", cId: clientId },
       config.jwt.refreshSecret,
       {
         expiresIn: config.jwt.refreshTokenExpiry,
@@ -89,6 +89,7 @@ export default class TokenService {
         typeof decoded !== "object" ||
         decoded === null ||
         typeof decoded.uId !== "string" ||
+        typeof decoded.cId !== "string" ||
         typeof decoded.sId !== "string" ||
         !Object.values(Roles).includes(decoded.role) ||
         decoded.type !== "ref"
