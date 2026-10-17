@@ -13,9 +13,9 @@ export default class TokenService {
     this.tokenRepository = tokenRepository;
   }
 
-  generateAccessToken(userId, sessionId, role) {
+  generateAccessToken(userId, sessionId, clientId, role) {
     return jwt.sign(
-      { uId: userId, sId: sessionId, role: role, type: "acc" },
+      { uId: userId, sId: sessionId, role: role, cId: clientId, type: "acc" },
       config.jwt.accessSecret,
       {
         expiresIn: config.jwt.accessTokenExpiry,
@@ -47,6 +47,7 @@ export default class TokenService {
         typeof decoded !== "object" ||
         decoded === null ||
         typeof decoded.uId !== "string" ||
+        typeof decoded.cId !== "string" ||
         typeof decoded.sId !== "string" ||
         !Object.values(Roles).includes(decoded.role) ||
         decoded.type !== "acc"

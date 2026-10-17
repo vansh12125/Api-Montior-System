@@ -149,6 +149,7 @@ export default class AuthService {
       const accToken = this.tokenService.generateAccessToken(
         existingUser._id.toString(),
         sessionId,
+        existingUser.clientId,
         existingUser.role,
       );
       const refToken = this.tokenService.generateRefreshToken(
@@ -253,6 +254,7 @@ export default class AuthService {
       const accessToken = this.tokenService.generateAccessToken(
         decoded.uId,
         decoded.sId,
+        decoded.cId,
         decoded.role,
       );
 

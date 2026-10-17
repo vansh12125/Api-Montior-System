@@ -1,6 +1,6 @@
 import { logger } from "../../../configs/index.js";
 
-const MAX_LIMIT = 100;
+const MAX_LIMIT = 1_000;
 const QUERY_TIMEOUT_MS = 30_000;
 
 export class MetricsRepository {
@@ -167,7 +167,12 @@ export class MetricsRepository {
     }
   }
 
-  async getTopEndpoints(clientId, limit = 10, startTime = null) {
+  async getTopEndpoints(
+    clientId,
+    limit = 10,
+    startTime = null,
+    endTime = null,
+  ) {
     try {
       const safeLimit = Math.min(Math.max(1, limit), MAX_LIMIT);
 
@@ -195,6 +200,13 @@ export class MetricsRepository {
         query += clientId != null ? ` AND` : ` WHERE`;
         query += ` time_bucket >= $${paramIndex}`;
         params.push(startTime);
+        paramIndex++;
+      }
+
+      if (endTime) {
+        query += clientId != null || startTime ? ` AND` : ` WHERE`;
+        query += ` time_bucket <= $${paramIndex}`;
+        params.push(endTime);
         paramIndex++;
       }
 

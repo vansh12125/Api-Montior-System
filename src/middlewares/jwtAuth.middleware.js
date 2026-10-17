@@ -7,7 +7,7 @@ const jwtMiddleware = (tokenService) => {
     throw new Error("Token service is required.");
   }
 
-  return async (req, res, next) => {
+  return async (req, _res, next) => {
     try {
       const accessToken = req.cookies[config.jwt.cookie.accessTokenName];
 
@@ -22,6 +22,7 @@ const jwtMiddleware = (tokenService) => {
         uId: decoded.uId,
         sId: decoded.sId,
         role: decoded.role,
+        clientId: decoded.cId,
       };
 
       logger.debug(`User jwt verified`);
