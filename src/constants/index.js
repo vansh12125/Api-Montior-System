@@ -37,6 +37,16 @@ const config = {
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000", 10),
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "1000", 10),
+    ingestionLimit: {
+      windowMs: parseInt(
+        process.env.RATE_LIMIT_WINDOW_MS_INGEST || "900000",
+        10,
+      ),
+      maxRequests: parseInt(
+        process.env.RATE_LIMIT_MAX_REQUESTS_INGEST || "1000",
+        10,
+      ),
+    },
   },
 
   jwt: {
