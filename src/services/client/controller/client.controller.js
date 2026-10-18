@@ -110,4 +110,61 @@ export default class ClientController {
       next(error);
     }
   }
+
+  async deactivateApiKey(req, res, next) {
+    try {
+      await this.clientService.deactivateKey(req, res);
+
+      return res
+        .status(200)
+        .json(
+          ResponseFormatter.success(
+            200,
+            "Deactivated Api Key successfully",
+            "Deactivated",
+          ),
+        );
+    } catch (error) {
+      logger.error("Error occurred in deactivateApiKey: ", error);
+      next(error);
+    }
+  }
+
+  async activateApiKey(req, res, next) {
+    try {
+      await this.clientService.activateKey(req, res);
+
+      return res
+        .status(200)
+        .json(
+          ResponseFormatter.success(
+            200,
+            "Activated Api Key successfully",
+            "Activated",
+          ),
+        );
+    } catch (error) {
+      logger.error("Error occurred in activateApiKey: ", error);
+      next(error);
+    }
+  }
+
+  async deleteApiKey(req, res, next) {
+    try {
+      await this.clientService.deleteKey(req, res);
+
+      return res
+        .status(200)
+        .json(
+          ResponseFormatter.success(
+            200,
+            "Deleted Api Key successfully",
+            "Deleted",
+          ),
+        );
+    } catch (error) {
+      logger.error("Error occurred in deleteApiKey: ", error);
+      next(error);
+    }
+  }
 }
