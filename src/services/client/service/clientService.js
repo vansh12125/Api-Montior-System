@@ -295,6 +295,90 @@ export default class ClientService {
     }
   }
 
+  async deactivateKey(req, _res) {
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
+
+      const { apiKeyId } = req.body;
+      const key = await this.apiKeyRepository.findKeyByIdAndDeactivate(
+        apiKeyId,
+        {
+          session,
+        },
+      );
+
+      if (!key) {
+        throw ApiError.notFound("ApiKey not found", {
+          code: "API_KEY_NOT_FOUND",
+        });
+      }
+
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+
+      logger.error(`Error occurred in deactivateKey: ${error}`);
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async activateKey(req, _res) {
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
+
+      const { apiKeyId } = req.body;
+      const key = await this.apiKeyRepository.findByKeyIdAndActivate(apiKeyId, {
+        session,
+      });
+
+      if (!key) {
+        throw ApiError.notFound("ApiKey not found", {
+          code: "API_KEY_NOT_FOUND",
+        });
+      }
+
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+
+      logger.error(`Error occurred in activateKey: ${error}`);
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async deleteKey(req, _res) {
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
+
+      const { apiKeyId } = req.body;
+      const key = await this.apiKeyRepository.findByKeyIdDelete(apiKeyId, {
+        session,
+      });
+
+      if (!key) {
+        throw ApiError.notFound("ApiKey not found", {
+          code: "API_KEY_NOT_FOUND",
+        });
+      }
+
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+
+      logger.error(`Error occurred in deleteKey: ${error}`);
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+
   async getClientByApiKey(keyId, rawKey, prefix) {
     try {
       const apiKey = await this.apiKeyRepository.findByKeyId(keyId);

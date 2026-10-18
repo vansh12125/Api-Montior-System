@@ -63,4 +63,49 @@ export default class MongoApiKeyRepository extends BaseApiKeyRepository {
       throw error;
     }
   }
+
+  async findKeyByIdAndDeactivate(keyId, options = {}) {
+    try {
+      return await this.model
+        .findOneAndUpdate(
+          { keyId },
+          {
+            $set: { isActive: false },
+          },
+          { returnDocument: "after" },
+        )
+        .session(options.session || null);
+    } catch (error) {
+      logger.error(`Error occured in findByKeyIdAndDeactivate:${error}`);
+      throw error;
+    }
+  }
+
+  async findByKeyIdAndActivate(keyId, options = {}) {
+    try {
+      return await this.model
+        .findOneAndUpdate(
+          { keyId },
+          {
+            $set: { isActive: true },
+          },
+          { returnDocument: "after" },
+        )
+        .session(options.session || null);
+    } catch (error) {
+      logger.error(`Error occured in findByKeyIdAndActivate:${error}`);
+      throw error;
+    }
+  }
+
+  async findByKeyIdDelete(keyId, options = {}) {
+    try {
+      return await this.model
+        .findOneAndDelete({ keyId })
+        .session(options.session || null);
+    } catch (error) {
+      logger.error(`Error occured in findByKeyIdDelete:${error}`);
+      throw error;
+    }
+  }
 }

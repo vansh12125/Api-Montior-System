@@ -41,4 +41,12 @@ const createApiKey = joi.object({
     .required(),
 });
 
-export { registerClient, createApiKey };
+const changeIsActiveApiKey = joi.object({
+  apiKeyId: joi.string().trim().required(),
+});
+
+const deleteApiKey = joi.object({
+  apiKeyId: joi.string().trim().required(),
+});
+
+export { registerClient, createApiKey, changeIsActiveApiKey,deleteApiKey };
