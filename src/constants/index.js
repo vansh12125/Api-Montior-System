@@ -84,6 +84,12 @@ const config = {
       ),
     },
   },
+  apiKey: {
+    maxRequest: parseInt(
+      process.env.NUMBER_OF_REQUEST_PER_API || "100",
+      10,
+    ),
+  },
 };
 
 export default config;
