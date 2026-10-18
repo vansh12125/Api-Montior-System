@@ -7,11 +7,13 @@ class AnalyticsDependency {
   static init() {
     const repositories = {
       metricsRepository: processorDependency.repository.metricsRepository,
+      apiHitRepository: processorDependency.repository.apiHitRepository,
     };
 
     const service = {
       analyticsService: new AnalyticsService({
         metricsRepository: repositories.metricsRepository,
+        apiHitRepository: repositories.apiHitRepository,
       }),
     };
 

@@ -348,6 +348,96 @@ export class MetricsRepository {
     }
   }
 
+  async getEndpointHealth({
+    clientId,
+    serviceName,
+    endpoint,
+    method,
+    startTime,
+    endTime,
+    limit = 10,
+    offset = 0,
+  } = {}) {
+    try {
+      if (!clientId) {
+        throw new Error("Client ID is required");
+      }
+
+      const conditions = ["client_id = $1"];
+      const params = [clientId];
+      let paramIndex = 2;
+
+      if (serviceName) {
+        conditions.push(`service_name = $${paramIndex++}`);
+        params.push(serviceName);
+      }
+
+      if (endpoint) {
+        conditions.push(`endpoint = $${paramIndex++}`);
+        params.push(endpoint);
+      }
+
+      if (method) {
+        conditions.push(`method = $${paramIndex++}`);
+        params.push(method);
+      }
+
+      if (startTime) {
+        conditions.push(`time_bucket >= $${paramIndex++}`);
+        params.push(startTime);
+      }
+
+      if (endTime) {
+        conditions.push(`time_bucket <= $${paramIndex++}`);
+        params.push(endTime);
+      }
+
+      const sqlQuery = `
+      SELECT
+        service_name,
+        endpoint,
+        method,
+        SUM(total_hits)::bigint AS total_requests,
+        SUM(error_hits)::bigint AS failed_requests,
+        SUM(total_hits - error_hits)::bigint AS successful_requests,
+        ROUND(
+          SUM(error_hits) * 100.0 /
+          NULLIF(SUM(total_hits), 0),
+          2
+        ) AS error_rate,
+        ROUND(
+          (
+            SUM(avg_latency * total_hits) /
+            NULLIF(SUM(total_hits), 0)
+          )::numeric,
+          2
+        ) AS avg_latency,
+        MIN(min_latency) AS min_latency,
+        MAX(max_latency) AS max_latency
+      FROM endpoint_metrics
+      WHERE ${conditions.join(" AND ")}
+      GROUP BY service_name, endpoint, method
+      ORDER BY SUM(error_hits) * 100.0 /
+        NULLIF(SUM(total_hits), 0) DESC NULLS LAST,
+        SUM(total_hits) DESC
+      LIMIT $${paramIndex++}
+      OFFSET $${paramIndex}
+    `;
+
+      params.push(limit, offset);
+
+      const result = await this._query(sqlQuery, params);
+
+      return result.rows;
+    } catch (error) {
+      logger.error(
+        "Error occurred in getEndpointHealth, MetricsRepository:",
+        error,
+      );
+      throw error;
+    }
+  }
+
   _query(sql, params = []) {
     if (!this._postgres || typeof this._postgres.query !== "function") {
       throw new Error("Postgess client not configured in MetricsRepository");
