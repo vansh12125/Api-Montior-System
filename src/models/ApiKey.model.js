@@ -64,6 +64,16 @@ const ApiKeySchema = new Schema(
       default: true,
     },
 
+    totalRequests: {
+      type: Number,
+      default: 0,
+    },
+
+    lastUsedAt: {
+      type: Date,
+      default: null,
+    },
+
     permissions: {
       canIngest: {
         type: Boolean,

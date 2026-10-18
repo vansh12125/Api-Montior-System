@@ -108,4 +108,20 @@ export default class MongoApiKeyRepository extends BaseApiKeyRepository {
       throw error;
     }
   }
+
+  async incrementRequestByKeyId(keyId) {
+    try {
+      return await this.model.findOneAndUpdate(
+        { keyId },
+        {
+          $inc: { totalRequests: 1 },
+          $set: { lastUsedAt: new Date() },
+        },
+        { returnDocument: "after" },
+      );
+    } catch (error) {
+      logger.error(`Error occurred in incrementRequestByKeyId: ${error}`);
+      throw error;
+    }
+  }
 }

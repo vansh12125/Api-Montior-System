@@ -8,6 +8,7 @@ import {
   verifyPassword,
 } from "../../shared/service/bcryptService.js";
 import mongoose from "mongoose";
+import config from "../../../constants/index.js";
 
 export default class ClientService {
   constructor(dependencies) {
@@ -288,7 +289,24 @@ export default class ClientService {
         });
       }
 
-      return await this.apiKeyRepository.findByClient(clientId);
+      const apiKeys = await this.apiKeyRepository.findByClient(clientId);
+      const maxRequest = config.apiKey.maxRequest;
+
+      return apiKeys.map((apiKey) => {
+        const totalRequests = apiKey.totalRequests || 0;
+
+        return {
+          ...apiKey.toObject(),
+          usage: {
+            used: totalRequests,
+            max: maxRequest,
+            percentage:
+              maxRequest > 0
+                ? Number(((totalRequests / maxRequest) * 100).toFixed(2))
+                : 0,
+          },
+        };
+      });
     } catch (error) {
       logger.error(`Error occurred in getAllApiKey: ${error}`);
       throw error;
@@ -384,14 +402,15 @@ export default class ClientService {
       const apiKey = await this.apiKeyRepository.findByKeyId(keyId);
 
       if (!apiKey) {
-        throw ApiError.badRequest("Invalid api key", {
+        throw ApiError.badRequest("Invalid API key", {
           code: "INVALID_KEY",
         });
       }
 
       const isValid = await verifyPassword(rawKey, apiKey.keyHash);
+
       if (!isValid) {
-        throw ApiError.badRequest("Invalid api key", {
+        throw ApiError.badRequest("Invalid API key", {
           code: "INVALID_KEY",
         });
       }
@@ -412,6 +431,14 @@ export default class ClientService {
           code: "INVALID_KEY",
         });
       }
+
+      if (apiKey.totalRequests >= config.apiKey.maxRequest) {
+        throw ApiError.badRequest("API key request limit exceeded", {
+          code: "LIMIT_EXCEEDED",
+        });
+      }
+
+      await this.apiKeyRepository.incrementRequestByKeyId(keyId);
 
       return {
         id: apiKey._id.toString(),
