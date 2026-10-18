@@ -135,6 +135,60 @@ export class AnalyticsService {
     }
   }
 
+  async getEndpointHealth(req, filters = {}) {
+    try {
+      const clientId = req.user.clientId;
+
+      if (!clientId) {
+        throw ApiError.badRequest("Client context is required", {
+          code: "CLIENT_CONTEXT_REQUIRED",
+        });
+      }
+
+      const { startTime, endTime } = this.parseTimeFilter(filters);
+
+      const result = await this.metricsRepository.getEndpointHealth({
+        clientId,
+        serviceName: filters.serviceName,
+        endpoint: filters.endpoint,
+        method: filters.method,
+        startTime,
+        endTime,
+        limit: filters.limit ?? 10,
+        offset: filters.offset ?? 0,
+      });
+
+      return {
+        endpoints: result.map((item) => ({
+          serviceName: item.service_name,
+          endpoint: item.endpoint,
+          method: item.method,
+          totalRequests: Number(item.total_requests ?? 0),
+          failedRequests: Number(item.failed_requests ?? 0),
+          successfulRequests: Number(item.successful_requests ?? 0),
+          errorRate: Number(item.error_rate ?? 0),
+          avgLatency: Number(item.avg_latency ?? 0),
+          minLatency: Number(item.min_latency ?? 0),
+          maxLatency: Number(item.max_latency ?? 0),
+        })),
+        filters: {
+          serviceName: filters.serviceName ?? null,
+          endpoint: filters.endpoint ?? null,
+          method: filters.method ?? null,
+          startTime,
+          endTime,
+        },
+        pagination: {
+          limit: filters.limit ?? 10,
+          offset: filters.offset ?? 0,
+        },
+      };
+    } catch (error) {
+      logger.error("Error occurred in getEndpointHealth service:", error);
+      throw error;
+    }
+  }
+
   parseTimeFilter(filters = {}) {
     let { startTime, endTime } = filters;
 

@@ -22,4 +22,8 @@ analyticsRouter.get("/export", clientAdminMiddleware, (req, res, next) => {
   analyticsController.exportCsvData(req, res, next);
 });
 
+analyticsRouter.get("/endpoint-health", (req, res, next) => {
+  analyticsController.getEndpointHealth(req, res, next);
+});
+
 export { analyticsRouter };
