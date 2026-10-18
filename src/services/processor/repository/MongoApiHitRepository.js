@@ -63,4 +63,74 @@ export class ApiHitRepository {
       throw error;
     }
   }
+
+  async findHistory({
+    clientId,
+    serviceName,
+    endpoint,
+    method,
+    statusCode,
+    minLatency,
+    maxLatency,
+    startTime,
+    endTime,
+    limit = 25,
+    offset = 0,
+  } = {}) {
+    try {
+      if (!clientId) {
+        throw new Error("Client ID is required");
+      }
+
+      const filter = { clientId };
+
+      if (serviceName) filter.serviceName = serviceName;
+      if (endpoint) filter.endpoint = endpoint;
+      if (method) filter.method = method;
+
+      if (statusCode !== undefined) {
+        filter.statusCode = statusCode;
+      }
+
+      if (minLatency !== undefined || maxLatency !== undefined) {
+        filter.latencyMs = {};
+
+        if (minLatency !== undefined) {
+          filter.latencyMs.$gte = minLatency;
+        }
+
+        if (maxLatency !== undefined) {
+          filter.latencyMs.$lte = maxLatency;
+        }
+      }
+
+      if (startTime || endTime) {
+        filter.timestamp = {};
+
+        if (startTime) {
+          filter.timestamp.$gte = new Date(startTime);
+        }
+
+        if (endTime) {
+          filter.timestamp.$lte = new Date(endTime);
+        }
+      }
+
+      const [records, total] = await Promise.all([
+        this._model
+          .find(filter)
+          .sort({ timestamp: -1 })
+          .skip(offset)
+          .limit(limit)
+          .lean(),
+
+        this._model.countDocuments(filter),
+      ]);
+
+      return { records, total };
+    } catch (error) {
+      logger.error("Error occurred in findHistory, ApiHitRepository:", error);
+      throw error;
+    }
+  }
 }

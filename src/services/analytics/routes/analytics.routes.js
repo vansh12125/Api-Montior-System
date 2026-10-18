@@ -26,4 +26,8 @@ analyticsRouter.get("/endpoint-health", (req, res, next) => {
   analyticsController.getEndpointHealth(req, res, next);
 });
 
+analyticsRouter.get("/request-history",clientAdminMiddleware, (req, res, next) => {
+  analyticsController.getRequestHistory(req, res, next);
+});
+
 export { analyticsRouter };

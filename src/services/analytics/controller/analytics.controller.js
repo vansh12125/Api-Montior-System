@@ -160,6 +160,53 @@ export class AnalyticsController {
     }
   }
 
+  async getRequestHistory(req, res, next) {
+    try {
+      const {
+        serviceName,
+        endpoint,
+        method,
+        statusCode,
+        minLatency,
+        maxLatency,
+        startTime,
+        endTime,
+        limit,
+        offset,
+      } = req.query;
+
+      const hasTimeRange =
+        (startTime !== undefined && startTime !== "") ||
+        (endTime !== undefined && endTime !== "");
+
+      const timeRange = hasTimeRange
+        ? this.validateTimeRange(startTime, endTime)
+        : { startTime: undefined, endTime: undefined };
+
+      const result = await this.analyticsService.getRequestHistory(req, {
+        serviceName,
+        endpoint,
+        method,
+        statusCode,
+        minLatency,
+        maxLatency,
+        startTime: timeRange.startTime,
+        endTime: timeRange.endTime,
+        limit,
+        offset,
+      });
+
+      return res
+        .status(200)
+        .json(
+          ResponseFormatter.success(200, "Fetched API request history", result),
+        );
+    } catch (error) {
+      logger.error("Error occurred in getRequestHistory controller:", error);
+      next(error);
+    }
+  }
+
   validateTimeRange(startTime, endTime) {
     const parseValue = (v) => {
       if (v === undefined || v === null || v === "") return null;
