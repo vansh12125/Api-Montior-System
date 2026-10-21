@@ -35,7 +35,7 @@ export class AnalyticsService {
         errorHits,
         errorRate: parseFloat(errorRate.toFixed(2)),
         successRate: parseFloat((100 - errorRate).toFixed(2)),
-        avgLatency: parseFloat(stats.avg_latency) || 0,
+        avgLatency: parseFloat(stats.avg_latency).toFixed(2) || 0,
         uniqueService: parseInt(stats.unique_services) || 0,
         uniqueEndpoints: parseInt(stats.unique_endpoints) || 0,
         timeRange: {
@@ -84,7 +84,7 @@ export class AnalyticsService {
           successRate: totalHits
             ? Number((((totalHits - errorHits) / totalHits) * 100).toFixed(2))
             : 0,
-          avgLatency: Number(stats.avg_latency ?? 0),
+          avgLatency: Number(stats.avg_latency ?? 0).toFixed(2),
           uniqueServices: Number(stats.unique_services ?? 0),
           uniqueEndpoints: Number(stats.unique_endpoints ?? 0),
         },
@@ -111,7 +111,14 @@ export class AnalyticsService {
   async exportCsvData(req, res, filters = {}) {
     try {
       const clientId = req.user.clientId;
-      const { startTime, endTime } = this.parseTimeFilter(filters);
+      const { startTime, endTime } = this.parseTimeFilter({
+        ...filters,
+        endTime:
+          typeof req.query.endTime === "string" &&
+          /^\d{4}-\d{2}-\d{2}$/.test(req.query.endTime)
+            ? new Date(`${req.query.endTime}T23:59:59.999+05:30`).toISOString()
+            : filters.endTime,
+      });
 
       const startTag = this.formatFileDate(startTime);
       const endTag = this.formatFileDate(endTime);
@@ -356,13 +363,17 @@ export class AnalyticsService {
 
     if (!startTime) {
       startTime = new Date();
-      startTime.setHours(startTime.getHours() - 24); //Last 24h
+      startTime.setHours(startTime.getHours() - 24);
     } else {
       startTime = new Date(startTime);
     }
 
     if (!endTime) {
       endTime = new Date();
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(endTime)) {
+      endTime = new Date(`${endTime}T00:00:00`);
+      endTime.setDate(endTime.getDate() + 1);
+      endTime = new Date(endTime.getTime() - 1);
     } else {
       endTime = new Date(endTime);
     }
