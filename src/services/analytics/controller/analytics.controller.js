@@ -216,7 +216,7 @@ export class AnalyticsController {
     };
 
     const start = parseValue(startTime);
-    const end = parseValue(endTime);
+    let end = parseValue(endTime);
 
     if ((startTime && Number.isNaN(start)) || (endTime && Number.isNaN(end))) {
       throw new ApiError("Invalid time format", 400);
@@ -224,6 +224,10 @@ export class AnalyticsController {
 
     if (start !== null && end !== null && start > end) {
       throw new ApiError("Invalid time range: start > end", 400);
+    }
+
+    if (end !== null) {
+      end += 24 * 60 * 60 * 1000;
     }
 
     return { startTime: start, endTime: end };
