@@ -6,6 +6,13 @@ API Monitor helps developers understand how their APIs are performing by trackin
 
 Instead of manually checking logs from different applications, developers can send API metrics to a central backend and analyze the collected data through analytics APIs.
 
+## 🔗 Related Repository
+
+The API Monitor platform consists of a frontend dashboard and a backend service.
+
+- **Frontend:** [Frontend-api-monitor-system](https://github.com/vansh12125/Frontend-api-monitor-system)
+- **Backend:** [Api-Montior-System](https://github.com/vansh12125/Api-Montior-System)
+
 ---
 
 ## Table of Contents
