@@ -156,7 +156,7 @@ export default class AuthService {
         existingUser._id.toString(),
         sessionId,
         existingUser.role,
-        existingUser.clientId
+        existingUser.clientId,
       );
 
       await this.tokenService.saveTokenInDb(
@@ -440,6 +440,26 @@ export default class AuthService {
       throw error;
     } finally {
       await session.endSession();
+    }
+  }
+
+  async getAllSessions(req,_res) {
+    try {
+      const { uId } = req.user;
+
+      if (!uId) {
+        throw ApiError.unauthorized("Authentication required", {
+          code: "AUTHENTICATION_REQUIRED",
+        });
+      }
+
+      const sessions = await this.tokenService.getTokens(uId);
+
+      return sessions;
+    } catch (error) {
+      logger.error(`Error occurred in getAllSessions Service: ${error}`);
+
+      throw error;
     }
   }
 }

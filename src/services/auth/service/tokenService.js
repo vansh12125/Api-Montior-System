@@ -169,6 +169,15 @@ export default class TokenService {
     }
   }
 
+  async getTokens(userId, options = {}) {
+    try {
+      return await this.tokenRepository.findByUserId(userId, options);
+    } catch (error) {
+      logger.error(`Error occured in getTokens token service : ${error}`);
+      throw error;
+    }
+  }
+
   async findBySessionIdAndRevoke(sessionId) {
     try {
       return await this.tokenRepository.findBySessionIdAndRevoke(sessionId);
