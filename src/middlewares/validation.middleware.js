@@ -1,8 +1,8 @@
 import { ResponseFormatter } from "../utils/index.js";
 
-const validate = (schema) => {
+const validate = (schema, source = "body") => {
   return (req, res, next) => {
-    const { error, value } = schema.validate(req.body ?? {}, {
+    const { error, value } = schema.validate(req[source] ?? {}, {
       abortEarly: false,
       stripUnknown: true,
     });
@@ -16,7 +16,7 @@ const validate = (schema) => {
       return res.status(400).json(ResponseFormatter.validationError(errors));
     }
 
-    req.body = value;
+    req[source] = value;
 
     next();
   };

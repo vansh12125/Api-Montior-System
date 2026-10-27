@@ -124,4 +124,40 @@ export default class AuthController {
       next(error);
     }
   }
+
+  async getAllSessions(req, res, next) {
+    try {
+      const result = await this.authService.getAllSessions(req, res);
+
+      return res
+        .status(200)
+        .json(
+          ResponseFormatter.success(
+            200,
+            "Fetched session successfully",
+            result,
+          ),
+        );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async logoutSessionId(req,res,next){
+    try {
+      const result=await this.authService.logoutWithSessionId(req,res);
+
+      return res
+        .status(200)
+        .json(
+          ResponseFormatter.success(
+            200,
+            "Loggout session successfully",
+            result,
+          ),
+        );
+    } catch (error) {
+      next(error)
+    }
+  }
 }

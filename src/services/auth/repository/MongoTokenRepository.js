@@ -55,7 +55,13 @@ export default class MongoTokenRepository extends BaseTokenRepository {
 
   async findByUserId(userId, options = {}) {
     try {
-      throw new Error("Method not implemented");
+      return await this.model
+        .find({
+          userId,
+          revoked: false,
+        })
+        .select("_id sessionId expireAt createdAt updatedAt clientInfo")
+        .session(options.session || null);
     } catch (error) {
       logger.error(`Error occured in findByUserId : ${error}`);
       throw error;
@@ -120,9 +126,7 @@ export default class MongoTokenRepository extends BaseTokenRepository {
         },
       );
     } catch (error) {
-      logger.error(
-        `Error occurred in findBySessionIdAndRevoke: ${error}`,
-      );
+      logger.error(`Error occurred in findBySessionIdAndRevoke: ${error}`);
       throw error;
     }
   }
@@ -144,9 +148,18 @@ export default class MongoTokenRepository extends BaseTokenRepository {
         },
       );
     } catch (error) {
-      logger.error(
-        `Error occurred in findByUserIdAndRevoke: ${error}`,
-      );
+      logger.error(`Error occurred in findByUserIdAndRevoke: ${error}`);
+      throw error;
+    }
+  }
+
+  async findBySessionIdAndUserId(sessionId, userId, options = {}) {
+    try {
+      return await this.model
+        .findOne({ sessionId, userId ,revoked:false})
+        .session(options.session || null);
+    } catch (error) {
+      logger.error(`Error occurred in findBySessionIdAndUserId: ${error}`);
       throw error;
     }
   }
