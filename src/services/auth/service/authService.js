@@ -443,7 +443,7 @@ export default class AuthService {
     }
   }
 
-  async getAllSessions(req,_res) {
+  async getAllSessions(req, _res) {
     try {
       const { uId } = req.user;
 
@@ -458,6 +458,45 @@ export default class AuthService {
       return sessions;
     } catch (error) {
       logger.error(`Error occurred in getAllSessions Service: ${error}`);
+
+      throw error;
+    }
+  }
+
+  async logoutWithSessionId(req, res) {
+    try {
+      const { uId } = req.user;
+
+      if (!uId) {
+        throw ApiError.unauthorized("Authentication required", {
+          code: "AUTHENTICATION_REQUIRED",
+        });
+      }
+
+      const { sessionId } = req.params;
+
+      if (!sessionId || typeof sessionId !== "string") {
+        throw ApiError.badRequest("Session ID is required", {
+          code: "REQUIRED",
+        });
+      }
+
+      const session = await this.tokenService.findBySessionIdAndUserId(
+        sessionId,
+        uId,
+      );
+
+      if (!session) {
+        throw ApiError.notFound("Session not found", {
+          code: "NOT_FOUND",
+        });
+      }
+
+      await this.tokenService.findBySessionIdAndRevoke(sessionId);
+
+      return "Session logged out successfully";
+    } catch (error) {
+      logger.error(`Error occurred in logoutWithSessionId Service: ${error}`);
 
       throw error;
     }

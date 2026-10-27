@@ -201,4 +201,20 @@ export default class TokenService {
       throw error;
     }
   }
+
+  async findBySessionIdAndUserId(sessionId, userId, options = {}) {
+    try {
+      return await this.tokenRepository.findBySessionIdAndUserId(
+        sessionId,
+        userId,
+        options,
+      );
+    } catch (error) {
+      logger.error(
+        `Error occurred in findBySessionIdAndUserId token service: ${error}`,
+      );
+
+      throw error;
+    }
+  }
 }

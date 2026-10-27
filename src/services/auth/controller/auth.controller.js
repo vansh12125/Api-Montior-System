@@ -142,4 +142,22 @@ export default class AuthController {
       next(error);
     }
   }
+
+  async logoutSessionId(req,res,next){
+    try {
+      const result=await this.authService.logoutWithSessionId(req,res);
+
+      return res
+        .status(200)
+        .json(
+          ResponseFormatter.success(
+            200,
+            "Loggout session successfully",
+            result,
+          ),
+        );
+    } catch (error) {
+      next(error)
+    }
+  }
 }

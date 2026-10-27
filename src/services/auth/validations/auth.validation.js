@@ -80,4 +80,14 @@ const updatePasswordSchema = joi.object({
     }),
 });
 
-export { registerClientAdminSchema, loginClientSchema, updatePasswordSchema };
+const sessionIdSchema = joi.object({
+  sessionId: joi.string()
+    .pattern(/^[a-f0-9]{64}$/)
+    .required()
+    .messages({
+      "string.pattern.base": "Invalid session ID",
+      "any.required": "Session ID is required",
+    }),
+});
+
+export { registerClientAdminSchema, loginClientSchema, updatePasswordSchema,sessionIdSchema };

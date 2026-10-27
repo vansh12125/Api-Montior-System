@@ -152,4 +152,15 @@ export default class MongoTokenRepository extends BaseTokenRepository {
       throw error;
     }
   }
+
+  async findBySessionIdAndUserId(sessionId, userId, options = {}) {
+    try {
+      return await this.model
+        .findOne({ sessionId, userId ,revoked:false})
+        .session(options.session || null);
+    } catch (error) {
+      logger.error(`Error occurred in findBySessionIdAndUserId: ${error}`);
+      throw error;
+    }
+  }
 }

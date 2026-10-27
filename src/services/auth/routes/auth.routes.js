@@ -5,6 +5,7 @@ import {
   registerClientAdminSchema,
   loginClientSchema,
   updatePasswordSchema,
+  sessionIdSchema
 } from "../validations/auth.validation.js";
 
 const authRouter = Router();
@@ -42,6 +43,10 @@ authRouter.get("/signout/all", jwtMiddleware, (req, res, next) => {
 
 authRouter.get("/sessions", jwtMiddleware, (req, res, next) => {
   authController.getAllSessions(req, res, next);
+});
+
+authRouter.delete("/sessions/:sessionId", jwtMiddleware,validate(sessionIdSchema,"params"), (req, res, next) => {
+  authController.logoutSessionId(req, res, next);
 });
 
 authRouter.patch(
